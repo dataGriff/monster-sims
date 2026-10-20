@@ -10,7 +10,7 @@ export const ROOMS: readonly Room[] = [
 
 export function createHouse(): House {
   return {
-    rooms: ROOMS.map((r) => ({ ...r })),
+    rooms: ROOMS.map((r) => ({ id: r.id, name: r.name })),
     furniture: [
       { id: 'coffin', name: 'coffin', room: 'crypt', broken: false },
       { id: 'table', name: 'kitchen table', room: 'kitchen', broken: false },
