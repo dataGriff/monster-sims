@@ -246,6 +246,8 @@ export interface NightPlan {
   day?: Partial<Record<MonsterId, ActionKind>>;
   /** Things to buy at dusk, in order, while the coin lasts. */
   build?: string[];
+  /** Which branch to take if a story event fires tonight, by story id. */
+  choices?: Record<string, string>;
 }
 
 export type Difficulty = 'gentle' | 'standard' | 'harsh';
@@ -262,6 +264,8 @@ export interface GameOptions {
   sandbox?: boolean;
   /** 'manor' (default) or 'valley' for the Welsh folklore village. */
   setting?: Setting;
+  /** Scripted story events at dusk. Off by default so bare sims stay predictable; the CLI turns them on. */
+  stories?: boolean;
 }
 
 export interface Plan {
@@ -289,6 +293,8 @@ export interface GameState {
   options: GameOptions;
   /** Every dusk plan applied so far, in order. */
   planHistory: NightPlan[];
+  /** Story events that have already fired, and when the last one did. */
+  stories: { fired: string[]; lastNight: number };
   log: Event[];
   status: GameStatus;
 }

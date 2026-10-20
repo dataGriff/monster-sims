@@ -23,3 +23,5 @@ export { saveGame, loadGame, parseSave } from './save.ts';
 export type { SaveFile } from './save.ts';
 export { DIFFICULTIES, RUN_LENGTHS, tuning } from './difficulty.ts';
 export type { Tuning, RunLength } from './difficulty.ts';
+export { STORIES, storyById, maybeStory } from './stories.ts';
+export type { Story, Choice } from './stories.ts';

@@ -45,6 +45,7 @@ const DETAIL_KINDS = new Set([
   'chandelier',
   'refused',
   'wail',
+  'story',
 ]);
 
 function nightLine(n: number, events: readonly Event[]): string {

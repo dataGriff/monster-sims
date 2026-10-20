@@ -15,7 +15,8 @@
     "lint": "oxlint --deny-warnings src tests vite.config.ts",
     "typecheck": "tsc --noEmit",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
-    "build": "vite build"
+    "build": "vite build",
+    "telemetry": "node src/cli/telemetry.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

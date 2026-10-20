@@ -6,6 +6,7 @@ import { loadGame, parseSave, saveGame } from '../sim/save.ts';
 import type { Plan } from '../sim/types.ts';
 import { USAGE, parseArgs } from './args.ts';
 import { formatGame, formatVerbose } from './format.ts';
+import { appendTelemetry, telemetryRecord } from './telemetry.ts';
 
 function main(argv: readonly string[]): number {
   const args = parseArgs(argv);
@@ -26,12 +27,14 @@ function main(argv: readonly string[]): number {
         ...(args.difficulty ? { difficulty: args.difficulty } : {}),
         ...(args.sandbox ? { sandbox: true } : {}),
         ...(args.setting ? { setting: args.setting } : {}),
+        stories: args.stories,
       });
   const seed = state.options.seed;
   while (state.status === 'running' && (args.until === undefined || state.night < args.until)) {
     runNight(state, planForNight(plan, state.night + 1));
   }
   if (args.save) writeFileSync(args.save, JSON.stringify(saveGame(state), null, 2) + '\n');
+  if (args.telemetry) appendTelemetry(args.telemetry, telemetryRecord(state));
   if (args.json) {
     process.stdout.write(JSON.stringify(state.log, null, 2) + '\n');
   } else if (args.verbose) {

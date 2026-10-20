@@ -10,6 +10,7 @@ import { DEFAULT_PLAN, planForNight } from './plan.ts';
 import { getQuirk, ignoredNeeds } from './quirks.ts';
 import { SANDBOX_RESET, tuning } from './difficulty.ts';
 import { createRng } from './rng.ts';
+import { maybeStory } from './stories.ts';
 import {
   AWARENESS_FORGET,
   GOSSIP_SPREAD,
@@ -48,6 +49,7 @@ export function createGame(options: GameOptions): GameState {
   return {
     options: { ...options },
     planHistory: [],
+    stories: { fired: [], lastNight: -10 },
     taken: [],
     night: 0,
     nightsToSurvive: options.nightsToSurvive ?? 7,
@@ -104,6 +106,7 @@ export function dusk(state: GameState, plan: NightPlan): void {
 
   state.planHistory.push(structuredClone(plan));
   applyBuild(ctx, plan.build);
+  maybeStory(ctx, plan);
   for (const m of state.monsters) for (const q of quirkHooks(m)) q.onDusk?.(ctx, m);
   maybeRogueNight(ctx);
 }

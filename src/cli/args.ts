@@ -8,9 +8,11 @@ export interface CliArgs {
   difficulty?: Difficulty;
   setting?: Setting;
   sandbox: boolean;
+  stories: boolean;
   plan?: string;
   save?: string;
   load?: string;
+  telemetry?: string;
   until?: number;
   nights: number;
   json: boolean;
@@ -19,7 +21,7 @@ export interface CliArgs {
 }
 
 export function parseArgs(argv: readonly string[]): CliArgs {
-  const args: CliArgs = { seed: 42, nights: 7, json: false, verbose: false, sandbox: false, help: false };
+  const args: CliArgs = { seed: 42, nights: 7, json: false, verbose: false, sandbox: false, stories: true, help: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = () => {
@@ -51,6 +53,9 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       case '--load':
         args.load = next();
         break;
+      case '--telemetry':
+        args.telemetry = next();
+        break;
       case '--until':
         args.until = Number(next());
         if (!Number.isInteger(args.until) || args.until < 1) throw new Error('--until must be a positive integer');
@@ -76,6 +81,9 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       }
       case '--sandbox':
         args.sandbox = true;
+        break;
+      case '--no-stories':
+        args.stories = false;
         break;
       case '--setting': {
         const v = next();
@@ -109,11 +117,14 @@ Usage: pnpm play [--seed N] [--plan plan.json] [--nights N] [--until N] [--save 
   --run R        short (7), standard (14) or long (28) nights.
   --difficulty D gentle, standard or harsh: tunes drift, rumour and the mob.
   --sandbox      The mob never ends the run.
+  --no-stories   Turn off the scripted story events at dusk.
   --setting S    manor (default) or valley: the Welsh folklore village. The valley
                  defaults its household to gwyllgi,cwnannwn,gwrach.
   --until N      Stop after night N without finishing the run (pair with --save).
   --save FILE    Write a save (seed, options, plan history) when the run stops.
   --load FILE    Resume from a save, then keep playing with the plan.
+  --telemetry F  Opt in: append one JSON line of run statistics to F (no
+                 timestamps, no machine details). Summarise with pnpm telemetry F.
   --verbose, -v  One plain-English line per event, grouped by night and phase.
   --json         Print the raw Event[] log instead of prose.
 `;

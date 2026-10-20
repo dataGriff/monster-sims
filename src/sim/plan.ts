@@ -76,10 +76,25 @@ export function parsePlan(raw: unknown): Plan {
         throw new Error(`${where} must be an object`);
       }
       const rec = entry as Record<string, unknown>;
-      if ('night' in rec || 'day' in rec) {
+      if ('night' in rec || 'day' in rec || 'build' in rec || 'choices' in rec) {
         const night = parseAssignments(rec['night'], `${where}.night`);
         const day = parseAssignments(rec['day'], `${where}.day`);
-        return Object.keys(day).length > 0 ? { night, day } : { night };
+        const out: NightPlan = { night };
+        if (Object.keys(day).length > 0) out.day = day;
+        if (rec['build'] !== undefined) {
+          if (!Array.isArray(rec['build']) || !rec['build'].every((x) => typeof x === 'string')) {
+            throw new Error(`${where}.build must be an array of item ids`);
+          }
+          out.build = rec['build'] as string[];
+        }
+        if (rec['choices'] !== undefined) {
+          const c = rec['choices'];
+          if (typeof c !== 'object' || c === null || Array.isArray(c) || !Object.values(c).every((v) => typeof v === 'string')) {
+            throw new Error(`${where}.choices must map story ids to choice ids`);
+          }
+          out.choices = c as Record<string, string>;
+        }
+        return out;
       }
       return { night: parseAssignments(rec, where) };
     }),
