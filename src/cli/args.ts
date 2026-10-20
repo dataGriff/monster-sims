@@ -1,5 +1,6 @@
 import { DIFFICULTIES, RUN_LENGTHS, type RunLength } from '../sim/difficulty.ts';
 import { PLAYABLE } from '../sim/monsters.ts';
+import { TABLES, type Locale } from '../sim/i18n.ts';
 import type { Archetype, Difficulty, Setting } from '../sim/types.ts';
 
 export interface CliArgs {
@@ -9,6 +10,7 @@ export interface CliArgs {
   setting?: Setting;
   sandbox: boolean;
   stories: boolean;
+  lang: Locale;
   plan?: string;
   save?: string;
   load?: string;
@@ -21,7 +23,7 @@ export interface CliArgs {
 }
 
 export function parseArgs(argv: readonly string[]): CliArgs {
-  const args: CliArgs = { seed: 42, nights: 7, json: false, verbose: false, sandbox: false, stories: true, help: false };
+  const args: CliArgs = { seed: 42, nights: 7, json: false, verbose: false, sandbox: false, stories: true, lang: 'en', help: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = () => {
@@ -85,6 +87,12 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       case '--no-stories':
         args.stories = false;
         break;
+      case '--lang': {
+        const l = next();
+        if (!(l in TABLES)) throw new Error(`--lang must be one of ${Object.keys(TABLES).join(', ')}`);
+        args.lang = l as Locale;
+        break;
+      }
       case '--setting': {
         const v = next();
         if (v !== 'manor' && v !== 'valley') throw new Error('--setting must be manor or valley');
@@ -118,6 +126,7 @@ Usage: pnpm play [--seed N] [--plan plan.json] [--nights N] [--until N] [--save 
   --difficulty D gentle, standard or harsh: tunes drift, rumour and the mob.
   --sandbox      The mob never ends the run.
   --no-stories   Turn off the scripted story events at dusk.
+  --lang L       en (default) or cy. Untranslated lines fall back to English.
   --setting S    manor (default) or valley: the Welsh folklore village. The valley
                  defaults its household to gwyllgi,cwnannwn,gwrach.
   --until N      Stop after night N without finishing the run (pair with --save).

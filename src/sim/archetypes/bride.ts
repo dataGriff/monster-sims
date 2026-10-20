@@ -4,19 +4,20 @@ import { job } from '../fledgling.ts';
 import { makeNeeds } from '../needs.ts';
 import { registerQuirk } from '../quirks.ts';
 import type { Monster } from '../types.ts';
+import { t } from '../i18n.ts';
 
 export const SHRIEK_FUN = 20;
 export const SHRIEK_SUSPICION = 4;
 
 registerQuirk({
   id: 'neverAsked',
-  description: 'Assign her the same action as the Golem and she will lie low instead. Nobody asked her.',
+  description: t('bride.neverAsked.1'),
   onDusk: (ctx, monster) => {
     const golem = ctx.state.monsters.find((m) => m.archetype === 'golem');
     if (!golem || monster.assignedAction === null || monster.assignedAction !== golem.assignedAction) return;
     const refused = monster.assignedAction;
     monster.assignedAction = 'lieLow';
-    emit(ctx, 'refused', `${monster.name} was not asked and will not ${refused} alongside ${golem.name}. She is staying in.`, {
+    emit(ctx, 'refused', t('bride.refused.1', { name: monster.name, refused, golem: golem.name }), {
       monsterId: monster.id,
       data: { refused },
     });
@@ -25,12 +26,12 @@ registerQuirk({
 
 registerQuirk({
   id: 'shriek',
-  description: 'Lying low ends in a shriek: fun for her, and the valley hears it.',
+  description: t('bride.refused.2'),
   afterAction: (ctx, monster, action, outcome) => {
     if (action.kind !== 'lieLow') return;
     const fun = adjustNeed(ctx, monster, 'fun', SHRIEK_FUN, 'lieLow');
     addSuspicion(ctx, SHRIEK_SUSPICION);
-    outcome.text = `${monster.name} stayed in, hissed at the mirror and shrieked once, magnificently (fun +${fun}, Suspicion +${SHRIEK_SUSPICION}).`;
+    outcome.text = t('bride.shriek.1', { name: monster.name, fun, SHRIEK_SUSPICION });
     outcome.data['suspicion'] = SHRIEK_SUSPICION;
   },
 });
@@ -39,7 +40,7 @@ export function createBride(): Monster {
   return {
     id: 'bride',
     archetype: 'bride',
-    name: 'The Bride',
+    name: t('bride.bride.1'),
     bedroom: 'workshop',
     bed: 'slab2',
     needs: makeNeeds({ social: 50 }),

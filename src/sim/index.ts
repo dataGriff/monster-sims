@@ -11,7 +11,9 @@ export { createGwyllgi, createCwnAnnwn, createGwrach, isHuntNight } from './arch
 export { createHouse, breakFurniture, breakRoom, brokenFurniture, roomExposure, mostExposedRoom, getRoom } from './house.ts';
 export * as townies from './townies.ts';
 export * as anger from './anger.ts';
-export { createVillage, moodFor, THRESHOLDS, MOOD_TEXT } from './village.ts';
+export { createVillage, moodFor, moodText, THRESHOLDS } from './village.ts';
+export { t, setLocale, getLocale, missingKeys, TABLES } from './i18n.ts';
+export type { Locale } from './i18n.ts';
 export { getQuirk } from './quirks.ts';
 export * as quirkRules from './quirks.ts';
 export * as actionRules from './actions.ts';

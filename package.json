@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "build": "vite build",
-    "telemetry": "node src/cli/telemetry.ts"
+    "telemetry": "node src/cli/telemetry.ts",
+    "i18n": "node src/cli/i18n-report.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

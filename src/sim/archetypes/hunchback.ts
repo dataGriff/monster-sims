@@ -4,6 +4,7 @@ import { job } from '../fledgling.ts';
 import { makeNeeds } from '../needs.ts';
 import { registerQuirk } from '../quirks.ts';
 import type { Monster } from '../types.ts';
+import { t } from '../i18n.ts';
 
 export const GARGOYLE_SOCIAL = 15;
 export const SANCTUARY_SUSPICION = -3;
@@ -11,34 +12,34 @@ export const BELLS_SOCIAL = -10;
 
 registerQuirk({
   id: 'belfry',
-  description: 'Villagers do not count as company; a night on the roof with the gargoyles does.',
+  description: t('hunchback.belfry.1'),
   filterNeedChange: (_ctx, _m, key, delta, source) => (key === 'social' && delta > 0 && source === 'socialise' ? 0 : delta),
   afterAction: (ctx, monster, action, outcome) => {
     if (action.kind !== 'sleep' && action.kind !== 'lieLow') return;
     const social = adjustNeed(ctx, monster, 'social', GARGOYLE_SOCIAL, 'quirk');
-    outcome.text += ` The gargoyles kept him company (social +${social}).`;
+    outcome.text += t('hunchback.belfry.2', { social });
     outcome.data['social'] = social;
   },
 });
 
 registerQuirk({
   id: 'sanctuary',
-  description: 'Lying low on the roof is claiming sanctuary, and the village respects it a little more.',
+  description: t('hunchback.sanctuary.1'),
   afterAction: (ctx, monster, action, outcome) => {
     if (action.kind !== 'lieLow') return;
     addSuspicion(ctx, SANCTUARY_SUSPICION);
-    outcome.text = `${monster.name} claimed sanctuary up among the bells (Suspicion ${Number(outcome.data['suspicion']) + SANCTUARY_SUSPICION}).${outcome.text.includes('gargoyles') ? ' The gargoyles kept him company.' : ''}`;
+    outcome.text = t('hunchback.sanctuary.2', { name: monster.name, v: Number(outcome.data['suspicion']) + SANCTUARY_SUSPICION, v2: outcome.data['social'] !== undefined ? t('hunchback.sanctuary.3') : '' });
     outcome.data['suspicion'] = Number(outcome.data['suspicion']) + SANCTUARY_SUSPICION;
   },
 });
 
 registerQuirk({
   id: 'belovedBells',
-  description: 'The bell ringer is the one resident the village is fond of; his shifts almost never fail, but the bells leave him deaf to company.',
+  description: t('hunchback.belovedBells.1'),
   afterAction: (ctx, monster, action, outcome) => {
     if (action.kind !== 'coverJob' || outcome.data['success'] !== true) return;
     const social = adjustNeed(ctx, monster, 'social', BELLS_SOCIAL, 'coverJob');
-    outcome.text += ` His ears rang till dawn (social ${social}).`;
+    outcome.text += t('hunchback.belovedBells.2', { social });
   },
 });
 
@@ -46,7 +47,7 @@ export function createHunchback(): Monster {
   return {
     id: 'hunchback',
     archetype: 'hunchback',
-    name: 'The Hunchback',
+    name: t('hunchback.hunchback.1'),
     bedroom: 'roof',
     bed: 'belfry',
     needs: makeNeeds({ social: 40, hygiene: 60 }),

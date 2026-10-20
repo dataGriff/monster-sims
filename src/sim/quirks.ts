@@ -12,6 +12,7 @@ import {
   townieAbroad,
 } from './townies.ts';
 import type { Action, Monster, NeedKey, QuirkId, Townie } from './types.ts';
+import { t as tr } from './i18n.ts';
 
 /** What an action did; quirks may rewrite `text` before it is logged. */
 export interface ActionOutcome {
@@ -74,7 +75,7 @@ export const GOLEM_BREAK_COMFORT = 10;
 const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
   nocturnalFeeder: {
     id: 'nocturnalFeeder',
-    description: 'Hunger only fills from "feed" at night; every other source is ignored.',
+    description: tr('quirks.nocturnalFeeder.1'),
     filterNeedChange: (_ctx, _m, key, delta, source) =>
       key === 'hunger' && delta > 0 && source !== 'feed' ? 0 : delta,
     afterAction: (ctx, monster, action, outcome) => {
@@ -82,7 +83,7 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
       const village = ctx.state.village;
       const donor = village.townies.find((t) => isAlly(t) && t.relationship !== 'turned');
       if (donor) {
-        outcome.text = `${monster.name} fed quietly; ${donor.name} rolled up a sleeve without being asked.`;
+        outcome.text = tr('quirks.nocturnalFeeder.2', { name: monster.name, donor: donor.name });
         outcome.data['donor'] = donor.id;
         return;
       }
@@ -91,20 +92,20 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
       addSuspicion(ctx, FEED_SUSPICION_COUNT);
       if (victim) {
         victim.awareness = Math.min(100, victim.awareness + FEED_AWARENESS);
-        outcome.text = `${monster.name} went out to feed; ${victim.name} woke up pale.`;
+        outcome.text = tr('quirks.nocturnalFeeder.3', { name: monster.name, victim: victim.name });
         outcome.data['victim'] = victim.id;
       } else {
-        outcome.text = `${monster.name} went out to feed; a villager woke up pale.`;
+        outcome.text = tr('quirks.nocturnalFeeder.4', { name: monster.name });
       }
       outcome.data['suspicion'] = FEED_SUSPICION_COUNT;
     },
   },
   daylightDrain: {
     id: 'daylightDrain',
-    description: 'Energy drains in daylight instead of recovering.',
+    description: tr('quirks.daylightDrain.1'),
     onDay: (ctx, monster) => {
       const applied = adjustNeed(ctx, monster, 'energy', -DAYLIGHT_DRAIN, 'daySleep');
-      emit(ctx, 'daylightDrain', `${monster.name} tossed in the crypt all day (energy ${applied}).`, {
+      emit(ctx, 'daylightDrain', tr('quirks.daylightDrain.2', { name: monster.name, applied }), {
         monsterId: monster.id,
         data: { energy: applied },
       });
@@ -113,13 +114,13 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
   },
   noReflection: {
     id: 'noReflection',
-    description: 'Hygiene never changes and is never a cause for anger (no reflection).',
+    description: tr('quirks.daylightDrain.3'),
     ignoredNeeds: ['hygiene'],
     filterNeedChange: (_ctx, _m, key, delta) => (key === 'hygiene' ? 0 : delta),
   },
   charm: {
     id: 'charm',
-    description: 'Socialising charms a villager up the tree friend → confidant → thrall → turned: +bond, +Suspicion.',
+    description: tr('quirks.charm.1'),
     afterAction: (ctx, monster, action, outcome) => {
       if (action.kind !== 'socialise') return;
       const village = ctx.state.village;
@@ -127,7 +128,7 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
       if (!mark) return;
       addSuspicion(ctx, CHARM_SUSPICION);
       const reached = advanceBond(mark, CHARM_BOND, 'turned');
-      outcome.text = `${monster.name} charmed ${mark.name}.`;
+      outcome.text = tr('quirks.charm.2', { name: monster.name, mark: mark.name });
       outcome.data['townie'] = mark.id;
       outcome.data['relationship'] = mark.relationship;
       outcome.data['suspicion'] = CHARM_SUSPICION;
@@ -137,13 +138,13 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
   fullMoon: {
     id: 'fullMoon',
     description:
-      'Every 7th night hygiene and comfort crash, fun maxes, and he blacks out: kitchen wrecked, Suspicion +15, no memory.',
+      tr('quirks.fullMoon.1'),
     onDusk: (ctx, monster) => {
       if (!isFullMoon(ctx.state.night)) return;
       monster.needs.hygiene = 0;
       monster.needs.comfort = 0;
       monster.needs.fun = 100;
-      emit(ctx, 'fullMoonRises', `The moon is full. ${monster.name} feels the change coming.`, {
+      emit(ctx, 'fullMoonRises', tr('quirks.fullMoonRises.1', { name: monster.name }), {
         monsterId: monster.id,
       });
     },
@@ -151,12 +152,12 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
       if (!isFullMoon(ctx.state.night)) return undefined;
       breakRoom(ctx.state.house, 'kitchen');
       addSuspicion(ctx, FULL_MOON_SUSPICION);
-      let text = `${monster.name} blacked out under the full moon. The kitchen is wrecked and howls carried to the village (Suspicion +${FULL_MOON_SUSPICION}). He remembers nothing.`;
+      let text = tr('quirks.fullMoon.2', { name: monster.name, FULL_MOON_SUSPICION });
       let suspicion = FULL_MOON_SUSPICION;
       if (action.kind === 'coverJob') {
         addSuspicion(ctx, FULL_MOON_SHIFT_DISASTER);
         suspicion += FULL_MOON_SHIFT_DISASTER;
-        text += ` His ${monster.coverJob.title} shift ended in disaster (Suspicion +${FULL_MOON_SHIFT_DISASTER}).`;
+        text += tr('quirks.fullMoon.3', { v: monster.coverJob.title, FULL_MOON_SHIFT_DISASTER });
       }
       emit(ctx, 'blackout', text, {
         monsterId: monster.id,
@@ -167,11 +168,11 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
   },
   dayWalker: {
     id: 'dayWalker',
-    description: 'The only monster who can act in daylight.',
+    description: tr('quirks.blackout.1'),
   },
   villagersFlee: {
     id: 'villagersFlee',
-    description: `Social can never rise above ${GOLEM_SOCIAL_CAP}: villagers flee. He does not take it personally.`,
+    description: tr('quirks.villagersFlee.1', { GOLEM_SOCIAL_CAP }),
     ignoredNeeds: ['social'],
     filterNeedChange: (_ctx, monster, key, delta) => {
       if (key !== 'social' || delta <= 0) return delta;
@@ -182,13 +183,13 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
       const social = Number(outcome.data['social'] ?? 0);
       outcome.text =
         social > 0
-          ? `${monster.name} bought a plant and no one came, but the walk did him good (social +${social}).`
-          : `${monster.name} bought a plant and no one came.`;
+          ? tr('quirks.villagersFlee.2', { name: monster.name, social })
+          : tr('quirks.villagersFlee.3', { name: monster.name });
     },
   },
   lightningPowered: {
     id: 'lightningPowered',
-    description: 'Energy recharges only through the lightning rod.',
+    description: tr('quirks.lightningPowered.1'),
     filterNeedChange: (ctx, _m, key, delta) => {
       if (key !== 'energy' || delta <= 0) return delta;
       return ctx.state.house.lightningRod ? delta : 0;
@@ -196,7 +197,7 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
   },
   heavyHanded: {
     id: 'heavyHanded',
-    description: `Frequently breaks furniture (comfort -${GOLEM_BREAK_COMFORT} for the whole house).`,
+    description: tr('quirks.heavyHanded.1', { GOLEM_BREAK_COMFORT }),
     onNight: (ctx, monster) => {
       if (!chance(ctx.state.rng, GOLEM_BREAK_CHANCE)) return;
       const intact = ctx.state.house.furniture.filter((f) => !f.broken);
@@ -207,7 +208,7 @@ const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
       emit(
         ctx,
         'furnitureBroken',
-        `${monster.name} sat on the ${victim.name} and it did not survive (house comfort -${GOLEM_BREAK_COMFORT}).`,
+        tr('quirks.furnitureBroken.1', { name: monster.name, victim: victim.name, GOLEM_BREAK_COMFORT }),
         { monsterId: monster.id, data: { furniture: victim.id, comfort: -GOLEM_BREAK_COMFORT } },
       );
       if (victim.artefact) curse(ctx, monster, victim.name, 'broke');
@@ -234,7 +235,7 @@ export function onStageReached(ctx: Ctx, monster: Monster, townie: Townie, stage
   const who = townie.name.charAt(0).toUpperCase() + townie.name.slice(1);
   switch (stage) {
     case 'friend':
-      emit(ctx, 'relationship', `${who} now counts ${monster.name} a friend.`, {
+      emit(ctx, 'relationship', tr('quirks.relationship.1', { who, name: monster.name }), {
         monsterId: monster.id,
         data: { townie: townie.id, stage },
       });
@@ -242,13 +243,13 @@ export function onStageReached(ctx: Ctx, monster: Monster, townie: Townie, stage
     case 'confidant':
       syncAllies(village);
       addSuspicion(ctx, CONFIDANT_SUSPICION);
-      emit(ctx, 'relationship', `${who} now keeps the manor's secrets (Suspicion ${CONFIDANT_SUSPICION}).`, {
+      emit(ctx, 'relationship', tr('quirks.relationship.2', { who, CONFIDANT_SUSPICION }), {
         monsterId: monster.id,
         data: { townie: townie.id, stage, suspicion: CONFIDANT_SUSPICION },
       });
       break;
     case 'thrall':
-      emit(ctx, 'relationship', `${who} is ${monster.name}'s thrall now and runs errands for the manor.`, {
+      emit(ctx, 'relationship', tr('quirks.relationship.3', { who, name: monster.name }), {
         monsterId: monster.id,
         data: { townie: townie.id, stage },
       });
@@ -266,7 +267,7 @@ export function onStageReached(ctx: Ctx, monster: Monster, townie: Townie, stage
       emit(
         ctx,
         'turned',
-        `${who} did not go home. ${fledgling.name} has moved into the crypt and the neighbours have noticed (Suspicion +${TURNED_SUSPICION}).`,
+        tr('quirks.turned.1', { who, fledgling: fledgling.name, TURNED_SUSPICION }),
         { monsterId: fledgling.id, data: { townie: townie.id, stage, suspicion: TURNED_SUSPICION } },
       );
       break;
@@ -284,7 +285,7 @@ export function curse(ctx: Ctx, monster: Monster, artefact: string, how: 'moved'
   emit(
     ctx,
     'curse',
-    `${monster.name} ${how} the ${artefact}. A dry wind went through the house and ${monster.name} has felt wrong ever since (comfort ${comfort}, hygiene ${hygiene}, anger +${anger}).`,
+    tr('quirks.curse.1', { name: monster.name, how, artefact, comfort, hygiene, anger }),
     { monsterId: monster.id, data: { artefact, how } },
   );
 }
@@ -295,7 +296,7 @@ export function artefacts(ctx: Ctx) {
 
 QUIRKS.undying = {
   id: 'undying',
-  description: 'Energy is always full and there is no bladder to speak of.',
+  description: tr('quirks.undying.1'),
   ignoredNeeds: ['energy', 'bladder'],
   onDusk: (_ctx, monster) => {
     monster.needs.energy = 100;
@@ -306,23 +307,23 @@ QUIRKS.undying = {
 
 QUIRKS.unravelling = {
   id: 'unravelling',
-  description: 'Comfort drops as the bandages unravel; only a night in the sarcophagus rewraps them.',
+  description: tr('quirks.unravelling.1'),
   afterAction: (ctx, monster, action, outcome) => {
     if (action.kind !== 'sleep') return;
     const bed = ctx.state.house.furniture.find((f) => f.id === monster.bed);
     if (bed && !bed.broken) {
       const comfort = adjustNeed(ctx, monster, 'comfort', REWRAP_COMFORT, 'sleep');
-      outcome.text = `${monster.name} lay in the ${bed.name} and was rewrapped by morning (comfort +${comfort}).`;
+      outcome.text = tr('quirks.unravelling.2', { name: monster.name, bed: bed.name, comfort });
       outcome.data['comfort'] = comfort;
     } else {
-      outcome.text = `${monster.name} had no sarcophagus to lie in and unravelled a little more on the floor.`;
+      outcome.text = tr('quirks.unravelling.3', { name: monster.name });
     }
   },
 };
 
 QUIRKS.slowMoving = {
   id: 'slowMoving',
-  description: 'Every action costs two slots: the night after acting he is still finishing.',
+  description: tr('quirks.slowMoving.1'),
   afterAction: (_ctx, monster) => {
     monster.memo['busyNights'] = 1;
   },
@@ -330,14 +331,14 @@ QUIRKS.slowMoving = {
 
 QUIRKS.hoarder = {
   id: 'hoarder',
-  description: 'Brings artefacts home from his outings; they are cursed to anyone else who moves them.',
+  description: tr('quirks.hoarder.1'),
   afterAction: (ctx, monster, action, outcome) => {
     if (action.kind !== 'feed' && action.kind !== 'socialise' && action.kind !== 'coverJob') return;
     if (!chance(ctx.state.rng, HOARD_CHANCE)) return;
     const name = pick(ctx.state.rng, ARTEFACTS);
     const n = artefacts(ctx).length + 1;
     ctx.state.house.furniture.push({ id: `artefact-${n}`, name, room: monster.bedroom, broken: false, artefact: true });
-    outcome.text += ` He came home with a ${name} under one arm.`;
+    outcome.text += tr('quirks.hoarder.2', { name });
     outcome.data['artefact'] = name;
   },
   onDawn: (ctx, monster) => {
@@ -348,20 +349,20 @@ QUIRKS.hoarder = {
 
 QUIRKS.visibility = {
   id: 'visibility',
-  description: 'Social only fills while visible (bandages and hat on), which he only bothers with to go out.',
+  description: tr('quirks.visibility.1'),
   onDusk: (_ctx, monster) => {
     monster.memo['visible'] = monster.assignedAction === 'socialise';
   },
   filterNeedChange: (_ctx, monster, key, delta) => (key === 'social' && delta > 0 && !monster.memo['visible'] ? 0 : delta),
   afterAction: (_ctx, monster, action, outcome) => {
-    if (action.kind === 'gameNight' && !monster.memo['visible']) outcome.text += ' Nobody could see him, so nobody dealt him in.';
-    if (action.kind === 'socialise') outcome.text += ' He had wrapped up and put the hat on for it.';
+    if (action.kind === 'gameNight' && !monster.memo['visible']) outcome.text += tr('quirks.visibility.2');
+    if (action.kind === 'socialise') outcome.text += tr('quirks.visibility.3');
   },
 };
 
 QUIRKS.prankster = {
   id: 'prankster',
-  description: 'Lying low means pranks: fun for him, less comfort for whoever he picks on.',
+  description: tr('quirks.prankster.1'),
   afterAction: (ctx, monster, action, outcome) => {
     if (action.kind !== 'lieLow') return;
     const others = ctx.state.monsters.filter((m) => m.id !== monster.id);
@@ -370,14 +371,14 @@ QUIRKS.prankster = {
     const victim = pick(ctx.state.rng, others);
     const comfort = adjustNeed(ctx, victim, 'comfort', PRANK_COMFORT, 'house');
     adjustNeed(ctx, victim, 'anger', PRANK_ANGER, 'house');
-    outcome.text = `${monster.name} stayed in and played pranks; ${victim.name} found the ${victim.bed} short-sheeted (fun +${fun + Number(outcome.data['fun'] ?? 0)}, ${victim.name} comfort ${comfort}).`;
+    outcome.text = tr('quirks.prankster.2', { name: monster.name, victim: victim.name, bed: victim.bed, v: fun + Number(outcome.data['fun'] ?? 0), comfort });
     outcome.data['victim'] = victim.id;
   },
 };
 
 QUIRKS.foodThief = {
   id: 'foodThief',
-  description: 'Steals food from the pantry and from plates; the household notices even if they cannot see him.',
+  description: tr('quirks.foodThief.1'),
   onNight: (ctx, monster) => {
     if (!chance(ctx.state.rng, STEAL_CHANCE)) return;
     const eaters = ctx.state.monsters.filter((m) => m.id !== monster.id && !m.quirks.includes('nocturnalFeeder'));
@@ -386,7 +387,7 @@ QUIRKS.foodThief = {
     const lost = -adjustNeed(ctx, victim, 'hunger', -STEAL_HUNGER, 'house');
     adjustNeed(ctx, monster, 'hunger', STEAL_HUNGER, 'feed');
     const anger = adjustNeed(ctx, victim, 'anger', STEAL_ANGER, 'house');
-    emit(ctx, 'foodStolen', `${victim.name}'s supper walked off the plate by itself (hunger -${lost}, anger +${anger}).`, {
+    emit(ctx, 'foodStolen', tr('quirks.foodStolen.1', { victim: victim.name, lost, anger }), {
       monsterId: monster.id,
       data: { victim: victim.id, hunger: lost },
     });
@@ -395,7 +396,7 @@ QUIRKS.foodThief = {
 
 QUIRKS.lowProfile = {
   id: 'lowProfile',
-  description: 'Hardest of the household to notice: whatever Suspicion his actions raise is halved.',
+  description: tr('quirks.foodStolen.2'),
   afterAction: (ctx, _m, _a, outcome) => {
     const raised = Number(outcome.data['suspicion'] ?? 0);
     if (raised <= 0) return;
@@ -403,21 +404,21 @@ QUIRKS.lowProfile = {
     if (refund === 0) return;
     addSuspicion(ctx, -refund);
     outcome.data['suspicion'] = raised - refund;
-    outcome.text += ' Hardly anyone noticed.';
+    outcome.text += tr('quirks.lowProfile.1');
   },
 };
 
 QUIRKS.fledgling = {
   id: 'fledgling',
-  description: 'Newly turned: feeds clumsily and is recognised in the village.',
+  description: tr('quirks.fledgling.1'),
   afterAction: (ctx, monster, action, outcome) => {
     if (action.kind === 'feed' && outcome.data['donor'] === undefined) {
       addSuspicion(ctx, FLEDGLING_FEED_SUSPICION);
-      outcome.text += ` Clumsy work (Suspicion +${FLEDGLING_FEED_SUSPICION}).`;
+      outcome.text += tr('quirks.fledgling.2', { FLEDGLING_FEED_SUSPICION });
     }
     if (action.kind === 'socialise') {
       addSuspicion(ctx, FLEDGLING_SOCIAL_SUSPICION);
-      outcome.text = `${monster.name} went into the village and was recognised (Suspicion +${FLEDGLING_SOCIAL_SUSPICION}).`;
+      outcome.text = tr('quirks.fledgling.3', { name: monster.name, FLEDGLING_SOCIAL_SUSPICION });
     }
   },
 };

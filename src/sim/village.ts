@@ -1,5 +1,6 @@
 import { createTownies } from './townies.ts';
 import type { Setting, Village, VillageMood } from './types.ts';
+import { t } from './i18n.ts';
 
 export const THRESHOLDS = {
   gossip: 40,
@@ -35,13 +36,16 @@ export function moodFor(suspicion: number): VillageMood {
   return 'calm';
 }
 
-export const MOOD_TEXT: Record<VillageMood, string> = {
-  calm: 'The village sleeps soundly.',
-  gossip: 'Gossip about the manor spreads through the market.',
-  snooping: 'The village is frightened enough to send for a man who knows about these things.',
-  mob: 'A mob is gathering in the square with torches.',
-  mobAtDoor: 'The mob is at the door.',
-};
+export function moodText(mood: VillageMood): string {
+  const texts: Record<VillageMood, string> = {
+  calm: t('village.text.1'),
+  gossip: t('village.text.2'),
+  snooping: t('village.text.3'),
+  mob: t('village.text.4'),
+  mobAtDoor: t('village.text.5'),
+  };
+  return texts[mood];
+}
 
 const ORDER: VillageMood[] = ['calm', 'gossip', 'snooping', 'mob', 'mobAtDoor'];
 

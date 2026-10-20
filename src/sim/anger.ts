@@ -7,6 +7,7 @@ import { addSuspicion, adjustNeed, emit, type Ctx } from './context.ts';
 import { breakFurniture } from './house.ts';
 import { chance, pick } from './rng.ts';
 import type { GameState, Monster } from './types.ts';
+import { t } from './i18n.ts';
 
 export const FIGHT_ANGER = 60;
 export const FIGHT_CHANCE = 0.5;
@@ -42,7 +43,7 @@ export function maybeRogueNight(ctx: Ctx): void {
   emit(
     ctx,
     'rogue',
-    `${rogue.name} ignored the plan and went out on the town to cool off (fun +${fun}, anger ${anger}, Suspicion +${ROGUE_SUSPICION}).`,
+    t('anger.rogue.1', { name: rogue.name, fun, anger, ROGUE_SUSPICION }),
     { monsterId: rogue.id, data: { lostAction: lost ?? 'idle', suspicion: ROGUE_SUSPICION } },
   );
 }
@@ -67,10 +68,10 @@ export function maybeFight(ctx: Ctx): void {
   if (intact.length > 0) {
     const victim = pick(state.rng, intact);
     breakFurniture(state.house, victim.id);
-    wreck = ` The ${victim.name} did not survive it.`;
+    wreck = t('anger.text.1', { victim: victim.name });
   }
   addSuspicion(ctx, FIGHT_SUSPICION);
-  emit(ctx, 'fight', `${a.name} and ${b.name} had a shouting match that carried to the lane.${wreck} (Suspicion +${FIGHT_SUSPICION})`, {
+  emit(ctx, 'fight', t('anger.fight.1', { a: a.name, b: b.name, wreck, FIGHT_SUSPICION }), {
     data: { a: a.id, b: b.id, suspicion: FIGHT_SUSPICION },
   });
 }
@@ -82,11 +83,11 @@ export function moveOuts(ctx: Ctx): Monster[] {
   for (const m of leaving) {
     state.monsters = state.monsters.filter((x) => x.id !== m.id);
     state.departed.push(m.id);
-    emit(ctx, 'moveOut', `${m.name} has had enough and moved out before sunrise.`, { monsterId: m.id, data: { anger: m.needs.anger } });
+    emit(ctx, 'moveOut', t('anger.moveOut.1', { name: m.name }), { monsterId: m.id, data: { anger: m.needs.anger } });
   }
   if (leaving.length > 0 && state.monsters.length === 0) {
     state.status = 'lost';
-    emit(ctx, 'gameOver', 'The manor stands empty. There is nobody left to suspect.', { data: { outcome: 'lost', reason: 'empty' } });
+    emit(ctx, 'gameOver', t('anger.gameOver.1'), { data: { outcome: 'lost', reason: 'empty' } });
   }
   return leaving;
 }

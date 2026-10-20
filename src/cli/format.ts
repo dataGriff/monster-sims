@@ -1,3 +1,4 @@
+import { t } from '../sim/i18n.ts';
 import type { Event, GameState } from '../sim/types.ts';
 
 const HEADLINE_KINDS = new Set(['action', 'blackout', 'wildHunt', 'idle', 'suspicion']);
@@ -53,7 +54,7 @@ function nightLine(n: number, events: readonly Event[]): string {
   const suspicion = events.find((e) => e.kind === 'suspicion');
   const parts = night.map((e) => e.text);
   if (suspicion) parts.push(suspicion.text);
-  return `Night ${n} — ${parts.join(' ')}`;
+  return t('cli.night', { n, parts: parts.join(' ') });
 }
 
 export function formatNight(n: number, events: readonly Event[]): string {
@@ -68,14 +69,14 @@ export function formatNight(n: number, events: readonly Event[]): string {
 
 /** One line per event, grouped by night and phase (MM-11). */
 export function formatVerbose(state: GameState, seed: number): string {
-  const out: string[] = [`Monster Manor — seed ${seed}, ${state.nightsToSurvive} nights to survive.`];
+  const out: string[] = [t('cli.title', { seed, nights: state.nightsToSurvive })];
   let night = -1;
   let phase = '';
   for (const e of state.log) {
     if (e.night !== night) {
       night = e.night;
       phase = '';
-      out.push('', `== Night ${night} ==`);
+      out.push('', t('cli.nightHeader', { n: night }));
     }
     if (e.phase !== phase) {
       phase = e.phase;
@@ -88,16 +89,19 @@ export function formatVerbose(state: GameState, seed: number): string {
 
 export function formatGame(state: GameState, seed: number): string {
   const out: string[] = [];
-  out.push(`Monster Manor — seed ${seed}, ${state.nightsToSurvive} nights to survive.`);
+  out.push(t('cli.title', { seed, nights: state.nightsToSurvive }));
   out.push(
-    `Household: ${state.monsters.map((m) => m.name).join(', ')}. Starting Suspicion ${state.log.find((e) => e.kind === 'suspicion')?.data?.['before'] ?? state.village.suspicion}.`,
+    t('cli.household', {
+      names: state.monsters.map((m) => m.name).join(', '),
+      suspicion: Number(state.log.find((e) => e.kind === 'suspicion')?.data?.['before'] ?? state.village.suspicion),
+    }),
   );
   out.push('');
   for (let n = 1; n <= state.night; n++) {
     out.push(formatNight(n, state.log.filter((e) => e.night === n)));
     out.push('');
   }
-  out.push(state.status === 'won' ? 'Result: the household survived. You win.' : 'Result: the mob is at the door. Game over.');
-  out.push(`Final Suspicion ${state.village.suspicion}. Household anger ${state.house.householdAnger}.`);
+  out.push(state.status === 'won' ? t('cli.won') : t('cli.lost'));
+  out.push(t('cli.final', { suspicion: state.village.suspicion, anger: state.house.householdAnger }));
   return out.join('\n');
 }

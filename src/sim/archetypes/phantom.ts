@@ -5,6 +5,7 @@ import { breakFurniture } from '../house.ts';
 import { makeNeeds } from '../needs.ts';
 import { registerQuirk } from '../quirks.ts';
 import type { Monster } from '../types.ts';
+import { t } from '../i18n.ts';
 
 export const ORGAN_FUN = 30;
 export const HUM_FUN = 5;
@@ -15,7 +16,7 @@ export const CHANDELIER_RELIEF = -30;
 
 registerQuirk({
   id: 'virtuoso',
-  description: 'Fun comes only from music. Lying low means playing the organ, if the house has one, and the music carries.',
+  description: t('phantom.virtuoso.1'),
   filterNeedChange: (_ctx, _m, key, delta, source) =>
     key === 'fun' && delta > 0 && (source === 'socialise' || source === 'gameNight') ? 0 : delta,
   afterAction: (ctx, monster, action, outcome) => {
@@ -23,24 +24,24 @@ registerQuirk({
     if (ctx.state.house.defences.organ) {
       const fun = adjustNeed(ctx, monster, 'fun', ORGAN_FUN, 'lieLow');
       addSuspicion(ctx, ORGAN_SUSPICION);
-      outcome.text = `${monster.name} played the organ until dawn (fun +${fun}); the music carried to the lane (Suspicion +${ORGAN_SUSPICION}).`;
+      outcome.text = t('phantom.virtuoso.2', { name: monster.name, fun, ORGAN_SUSPICION });
       outcome.data['suspicion'] = Number(outcome.data['suspicion'] ?? 0) + ORGAN_SUSPICION;
     } else {
       const fun = adjustNeed(ctx, monster, 'fun', HUM_FUN, 'lieLow');
-      outcome.text = `${monster.name} hummed to himself in the dark; there is no organ in this house (fun +${fun}).`;
+      outcome.text = t('phantom.virtuoso.3', { name: monster.name, fun });
     }
   },
 });
 
 registerQuirk({
   id: 'masked',
-  description: 'Half a face behind a mask: company counts for half.',
+  description: t('phantom.masked.1'),
   filterNeedChange: (_ctx, _m, key, delta) => (key === 'social' && delta > 0 ? Math.floor(delta / 2) : delta),
 });
 
 registerQuirk({
   id: 'chandelier',
-  description: 'Push him to 60 anger and something heavy comes down in the parlour.',
+  description: t('phantom.chandelier.1'),
   onDawn: (ctx, monster) => {
     if (monster.needs.anger < CHANDELIER_ANGER) return;
     const victim = ctx.state.house.furniture.find((f) => f.room === 'parlour' && !f.broken);
@@ -48,7 +49,7 @@ registerQuirk({
     breakFurniture(ctx.state.house, victim.id);
     addSuspicion(ctx, CHANDELIER_SUSPICION);
     const anger = adjustNeed(ctx, monster, 'anger', CHANDELIER_RELIEF, 'quirk');
-    emit(ctx, 'chandelier', `${monster.name} brought the chandelier down on the ${victim.name}. The crash was heard in the square (Suspicion +${CHANDELIER_SUSPICION}, anger ${anger}).`, {
+    emit(ctx, 'chandelier', t('phantom.chandelier.2', { name: monster.name, victim: victim.name, CHANDELIER_SUSPICION, anger }), {
       monsterId: monster.id,
       data: { furniture: victim.id, suspicion: CHANDELIER_SUSPICION },
     });
@@ -59,7 +60,7 @@ export function createPhantom(): Monster {
   return {
     id: 'phantom',
     archetype: 'phantom',
-    name: 'The Phantom',
+    name: t('phantom.phantom.1'),
     bedroom: 'parlour',
     bed: 'daybed',
     needs: makeNeeds({ social: 40, fun: 50 }),

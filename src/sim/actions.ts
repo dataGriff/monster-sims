@@ -6,6 +6,7 @@ import { chance, pick } from './rng.ts';
 import { SOCIAL_BOND, SOCIAL_BOND_CAP, advanceBond, townieAbroad } from './townies.ts';
 import type { Action, ActionKind, Monster, RoomId } from './types.ts';
 import { moodFor, moodRank } from './village.ts';
+import { t } from './i18n.ts';
 
 export const FEED_HUNGER = 50;
 export const SLEEP_ENERGY = 40;
@@ -47,15 +48,18 @@ export const BICKER_FUN = -5;
 export const BICKER_ANGER = 5;
 export const SOLITAIRE_FUN = 5;
 
-export const ACTION_LABEL: Record<ActionKind, string> = {
+export function actionLabel(kind: ActionKind): string {
+  const labels: Record<ActionKind, string> = {
   feed: 'feed',
   sleep: 'sleep',
   socialise: 'socialise',
-  coverJob: 'cover job',
+  coverJob: t('actions.text.1'),
   repair: 'repair',
   lieLow: 'lie low',
-  gameNight: 'game night',
-};
+  gameNight: t('actions.text.2'),
+  };
+  return labels[kind];
+}
 
 /** Which room an action lights up at night, if any. Lit windows raise exposure. */
 export function actionRoom(monster: Monster, kind: ActionKind): RoomId | null {
@@ -97,18 +101,18 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
   switch (action.kind) {
     case 'feed': {
       const hunger = adjustNeed(ctx, monster, 'hunger', FEED_HUNGER, 'feed');
-      return { text: `${name} ate (hunger +${hunger}).`, data: { hunger } };
+      return { text: t('actions.feed.1', { name, hunger }), data: { hunger } };
     }
     case 'sleep': {
       const bed = ctx.state.house.furniture.find((f) => f.id === monster.bed);
       const bedBroken = !bed || bed.broken;
       const energy = adjustNeed(ctx, monster, 'energy', bedBroken ? SLEEP_ENERGY / 2 : SLEEP_ENERGY, 'sleep');
       adjustNeed(ctx, monster, 'bladder', SLEEP_BLADDER, 'sleep');
-      const where = bedBroken ? ' on the floor, the bed being in pieces,' : '';
+      const where = bedBroken ? t('actions.sleep.1') : '';
       const text =
         energy > 0
-          ? `${name} slept${where} (energy +${energy}).`
-          : `${name} lay still all night but did not recharge${ctx.state.house.lightningRod ? '' : '; the lightning rod is down'}.`;
+          ? t('actions.sleep.2', { name, where, energy })
+          : t('actions.sleep.3', { name, v: ctx.state.house.lightningRod ? '' : t('actions.sleep.4') });
       return { text, data: { energy, bedBroken } };
     }
     case 'socialise': {
@@ -116,7 +120,7 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       const fun = adjustNeed(ctx, monster, 'fun', SOCIAL_FUN, 'socialise');
       addSuspicion(ctx, SOCIAL_SUSPICION);
       const outcome: ActionOutcome = {
-        text: social > 0 ? `${name} spent the evening at the inn (social +${social}).` : `${name} went out and nobody would talk to him.`,
+        text: social > 0 ? t('actions.socialise.1', { name, social }) : t('actions.socialise.2', { name }),
         data: { social, fun, suspicion: SOCIAL_SUSPICION },
       };
       if (social > 0 && !monster.quirks.includes('charm')) {
@@ -124,7 +128,7 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
         if (abroad.length > 0) {
           const met = pick(ctx.state.rng, abroad);
           const reached = advanceBond(met, SOCIAL_BOND, SOCIAL_BOND_CAP);
-          outcome.text = `${name} spent the evening at the inn with ${met.name} (social +${social}).`;
+          outcome.text = t('actions.socialise.3', { name, met: met.name, social });
           outcome.data['townie'] = met.id;
           if (reached) onStageReached(ctx, monster, met, reached);
         }
@@ -135,24 +139,24 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       const job = monster.coverJob;
       if (!job.employed) {
         const fun = adjustNeed(ctx, monster, 'fun', NO_JOB_FUN, 'coverJob');
-        return { text: `${name} has no job to go to any more and sat in the kitchen (fun ${fun}).`, data: { success: false, unemployed: true } };
+        return { text: t('actions.coverJob.1', { name, fun }), data: { success: false, unemployed: true } };
       }
       adjustNeed(ctx, monster, 'energy', COVER_JOB_ENERGY, 'coverJob');
       adjustNeed(ctx, monster, 'fun', COVER_JOB_FUN, 'coverJob');
       const clash = action.slot === 'day' && monster.assignedAction === 'coverJob';
       if (clash) adjustNeed(ctx, monster, 'energy', CLASH_ENERGY, 'coverJob');
-      const clashNote = clash ? ' Two shifts in one turn of the clock took it out of him.' : '';
+      const clashNote = clash ? t('actions.coverJob.2') : '';
       const failed = chance(ctx.state.rng, coverJobFailChance(ctx, monster, action.slot));
       if (failed) {
         job.streak = 0;
         job.heat = Math.min(HEAT_SACKED, job.heat + HEAT_ON_FAIL);
         addSuspicion(ctx, COVER_JOB_FAIL_SUSPICION);
-        let text = `${name}'s shift as ${jobTitle(monster)} went badly; people talked (Suspicion +${COVER_JOB_FAIL_SUSPICION}).${clashNote}`;
+        let text = t('actions.coverJob.3', { name, v: jobTitle(monster), COVER_JOB_FAIL_SUSPICION, clashNote });
         if (job.heat >= HEAT_SACKED) {
           job.employed = false;
-          text += ` The employer has had enough: ${name} is sacked.`;
+          text += t('actions.coverJob.4', { name });
         } else if (job.heat >= HEAT_QUESTIONS) {
-          text += ' The employer is starting to ask questions.';
+          text += t('actions.coverJob.5');
         }
         return { text, data: { success: false, suspicion: COVER_JOB_FAIL_SUSPICION, heat: job.heat, sacked: !job.employed } };
       }
@@ -160,14 +164,14 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       ctx.state.house.coin += JOB_PAY;
       job.heat = Math.max(0, job.heat + HEAT_ON_SUCCESS);
       job.streak += 1;
-      let text = `${name} worked a quiet shift as ${jobTitle(monster)} (Suspicion -${job.relief}, +${JOB_PAY} coin).${clashNote}`;
+      let text = t('actions.text.3', { name, v: jobTitle(monster), relief: job.relief, JOB_PAY, clashNote });
       let promoted = false;
       if (job.streak >= PROMOTION_STREAK && job.level < MAX_LEVEL) {
         job.level += 1;
         job.relief += PROMOTION_RELIEF;
         job.streak = 0;
         promoted = true;
-        text += ` Promoted: ${name} is now ${jobTitle(monster)} (relief ${job.relief}).`;
+        text += t('actions.text.4', { name, v: jobTitle(monster), relief: job.relief });
       }
       return { text, data: { success: true, suspicion: -job.relief, coin: JOB_PAY, promoted, level: job.level } };
     }
@@ -190,21 +194,21 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       if (relic && !monster.quirks.includes('hoarder')) curse(ctx, monster, relic.name, 'moved');
       const text =
         fixed.length > 0
-          ? `${name} repaired the ${fixed.join(' and the ')} (house comfort +${REPAIR_COMFORT}).`
-          : `${name} tidied the house; nothing needed fixing (house comfort +${REPAIR_COMFORT}).`;
+          ? t('actions.repair.1', { name, v: fixed.join(t('common.andThe')), REPAIR_COMFORT })
+          : t('actions.repair.2', { name, REPAIR_COMFORT });
       return { text, data: { fixed: fixed.length, comfort: REPAIR_COMFORT } };
     }
     case 'gameNight': {
       const players = ctx.state.monsters.filter((m) => m.assignedAction === 'gameNight');
       if (players.length < 2) {
         const fun = adjustNeed(ctx, monster, 'fun', SOLITAIRE_FUN, 'gameNight');
-        return { text: `${name} laid out a game for one and played patience (fun +${fun}).`, data: { fun, players: 1 } };
+        return { text: t('actions.gameNight.1', { name, fun }), data: { fun, players: 1 } };
       }
       if (ctx.state.house.householdAnger >= GAME_NIGHT_MAX_ANGER) {
         const fun = adjustNeed(ctx, monster, 'fun', BICKER_FUN, 'gameNight');
         const anger = adjustNeed(ctx, monster, 'anger', BICKER_ANGER, 'gameNight');
         return {
-          text: `${name} tried to start a game but everyone was too cross to play (fun ${fun}, anger +${anger}).`,
+          text: t('actions.gameNight.2', { name, fun, anger }),
           data: { fun, anger, players: players.length, bickered: true },
         };
       }
@@ -213,8 +217,8 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       const anger = adjustNeed(ctx, monster, 'anger', GAME_NIGHT_ANGER, 'gameNight');
       const first = players[0]?.id === monster.id;
       const text = first
-        ? `${name} dealt cards in the parlour for the household (fun +${fun}, social +${social}, anger ${anger}).`
-        : `${name} joined the game (fun +${fun}, social +${social}, anger ${anger}).`;
+        ? t('actions.gameNight.3', { name, fun, social, anger })
+        : t('actions.gameNight.4', { name, fun, social, anger });
       return { text, data: { fun, social, anger, players: players.length } };
     }
     case 'lieLow': {
@@ -224,7 +228,7 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       adjustNeed(ctx, monster, 'bladder', LIE_LOW_BLADDER, 'lieLow');
       adjustNeed(ctx, monster, 'fun', LIE_LOW_FUN, 'lieLow');
       return {
-        text: `${name} kept the curtains drawn and lay low (Suspicion ${LIE_LOW_SUSPICION}).`,
+        text: t('actions.lieLow.1', { name, LIE_LOW_SUSPICION }),
         data: { suspicion: LIE_LOW_SUSPICION, hunger },
       };
     }
