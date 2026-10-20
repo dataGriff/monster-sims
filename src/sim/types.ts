@@ -13,7 +13,23 @@
 export type MonsterId = string;
 
 /** The built-in archetypes. A monster's `archetype` picks its quirks and text. */
-export type Archetype = 'count' | 'wolfman' | 'golem' | 'mummy' | 'invisible' | 'fledgling';
+export type Archetype =
+  | 'count'
+  | 'wolfman'
+  | 'golem'
+  | 'mummy'
+  | 'invisible'
+  | 'lakeling'
+  | 'phantom'
+  | 'bride'
+  | 'hunchback'
+  | 'gwyllgi'
+  | 'cwnannwn'
+  | 'gwrach'
+  | 'fledgling';
+
+/** Which village the manor stands over. The valley is the Welsh folklore set. */
+export type Setting = 'manor' | 'valley';
 
 export const NEED_KEYS = [
   'hunger',
@@ -67,7 +83,26 @@ export type QuirkId =
   | 'visibility'
   | 'prankster'
   | 'foodThief'
-  | 'lowProfile';
+  | 'lowProfile'
+  | 'mustStayWet'
+  | 'floodsHall'
+  | 'freshwater'
+  | 'virtuoso'
+  | 'masked'
+  | 'chandelier'
+  | 'neverAsked'
+  | 'shriek'
+  | 'belfry'
+  | 'sanctuary'
+  | 'belovedBells'
+  | 'omen'
+  | 'packAnimal'
+  | 'nightRoad'
+  | 'wildHunt'
+  | 'otherworldly'
+  | 'deathWail'
+  | 'mistBorn'
+  | 'crossroads';
 
 export interface CoverJob {
   /** Human-readable job title, e.g. "night watchman". */
@@ -225,6 +260,8 @@ export interface GameOptions {
   difficulty?: Difficulty;
   /** Sandbox: the mob never ends the run. */
   sandbox?: boolean;
+  /** 'manor' (default) or 'valley' for the Welsh folklore village. */
+  setting?: Setting;
 }
 
 export interface Plan {

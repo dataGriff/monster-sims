@@ -54,7 +54,10 @@ export function createGame(options: GameOptions): GameState {
     rng: createRng(options.seed),
     monsters: createMonsters(options.household),
     house: createHouse(options.household ?? []),
-    village: createVillage(options.suspicion ?? (options.difficulty ? tuning({ options } as GameState).startingSuspicion : undefined)),
+    village: createVillage(
+      options.suspicion ?? (options.difficulty ? tuning({ options } as GameState).startingSuspicion : undefined),
+      options.setting ?? 'manor',
+    ),
     pendingSuspicion: 0,
     noise: 0,
     departed: [],
@@ -209,6 +212,10 @@ function laidLowTonight(state: GameState): boolean {
   );
 }
 
+function cap(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function metTonight(state: GameState, townieId: string): boolean {
   return state.log.some(
     (e) => e.night === state.night && e.kind === 'action' && e.data?.['townie'] === townieId,
@@ -221,39 +228,43 @@ function hunterAtDawn(ctx: Ctx, highEnough: boolean): void {
   const village = state.village;
   let vh = hunter(village);
   if (!vh && highEnough) {
-    vh = createHunter();
+    vh = createHunter(state.options.setting ?? 'manor');
     village.townies.push(vh);
     village.hunterPresent = true;
-    emit(ctx, 'hunterArrives', 'Van Helsing has taken a room at the inn and is asking questions.', { data: { townie: HUNTER_ID } });
+    const arrival =
+      vh.id === HUNTER_ID && vh.job === 'cunning man'
+        ? 'The dyn hysbys has come down from the mountain and taken the room over the pub.'
+        : 'Van Helsing has taken a room at the inn and is asking questions.';
+    emit(ctx, 'hunterArrives', arrival, { data: { townie: HUNTER_ID } });
   }
   if (!vh) return;
   if (vh.relationship === 'turned') return;
   if (!highEnough && village.suspicion < HUNTER_LEAVES_BELOW && !isAlly(vh)) {
     village.townies = village.townies.filter((t) => t.id !== vh.id);
     village.hunterPresent = false;
-    emit(ctx, 'hunterLeaves', 'Van Helsing settled his bill at the inn and left on the morning coach.', { data: { townie: HUNTER_ID } });
+    emit(ctx, 'hunterLeaves', `${cap(vh.name)} settled the bill and left on the morning coach.`, { data: { townie: HUNTER_ID } });
     return;
   }
   if (isAlly(vh)) return;
   if (metTonight(state, vh.id)) {
-    emit(ctx, 'distracted', 'Van Helsing spent the night being talked at and snooped nowhere.', { data: { townie: HUNTER_ID } });
+    emit(ctx, 'distracted', `${cap(vh.name)} spent the night being talked at and snooped nowhere.`, { data: { townie: HUNTER_ID } });
     return;
   }
   const room = mostExposedRoom(state.house);
   if (laidLowTonight(state)) {
-    emit(ctx, 'snoopingFoiled', `Van Helsing prowled around ${room.name} but found the curtains drawn and the doors barred.`, {
+    emit(ctx, 'snoopingFoiled', `${cap(vh.name)} prowled around ${room.name} but found the curtains drawn and the doors barred.`, {
       data: { room: room.id, suspicion: 0 },
     });
     return;
   }
   if (room.secretPassage && !room.lit) {
-    emit(ctx, 'snoopingFoiled', `Van Helsing prowled around ${room.name} and found nothing but a draught.`, {
+    emit(ctx, 'snoopingFoiled', `${cap(vh.name)} prowled around ${room.name} and found nothing but a draught.`, {
       data: { room: room.id, suspicion: 0 },
     });
     return;
   }
   addSuspicion(ctx, SNOOPING_SUSPICION);
-  emit(ctx, 'snooping', `Van Helsing snooped around ${room.name} and nobody was lying low (Suspicion +${SNOOPING_SUSPICION}).`, {
+  emit(ctx, 'snooping', `${cap(vh.name)} snooped around ${room.name} and nobody was lying low (Suspicion +${SNOOPING_SUSPICION}).`, {
     data: { room: room.id, suspicion: SNOOPING_SUSPICION },
   });
 }

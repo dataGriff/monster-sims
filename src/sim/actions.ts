@@ -61,7 +61,9 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
 export function actionRoom(monster: Monster, kind: ActionKind): RoomId | null {
   switch (kind) {
     case 'feed':
-      return monster.quirks.includes('nocturnalFeeder') ? null : 'kitchen';
+      return monster.quirks.some((q) => q === 'nocturnalFeeder' || q === 'freshwater' || q === 'nightRoad' || q === 'wildHunt')
+        ? null
+        : 'kitchen';
     case 'sleep':
       return monster.bedroom;
     case 'repair':

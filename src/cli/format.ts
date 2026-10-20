@@ -1,6 +1,6 @@
 import type { Event, GameState } from '../sim/types.ts';
 
-const HEADLINE_KINDS = new Set(['action', 'blackout', 'idle', 'suspicion']);
+const HEADLINE_KINDS = new Set(['action', 'blackout', 'wildHunt', 'idle', 'suspicion']);
 const DETAIL_KINDS = new Set([
   'fullMoonRises',
   'recruited',
@@ -40,6 +40,11 @@ const DETAIL_KINDS = new Set([
   'curse',
   'foodStolen',
   'sandbox',
+  'dryingOut',
+  'flood',
+  'chandelier',
+  'refused',
+  'wail',
 ]);
 
 function nightLine(n: number, events: readonly Event[]): string {

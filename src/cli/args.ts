@@ -1,11 +1,12 @@
 import { DIFFICULTIES, RUN_LENGTHS, type RunLength } from '../sim/difficulty.ts';
 import { PLAYABLE } from '../sim/monsters.ts';
-import type { Archetype, Difficulty } from '../sim/types.ts';
+import type { Archetype, Difficulty, Setting } from '../sim/types.ts';
 
 export interface CliArgs {
   seed: number;
   household?: Archetype[];
   difficulty?: Difficulty;
+  setting?: Setting;
   sandbox: boolean;
   plan?: string;
   save?: string;
@@ -76,6 +77,12 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       case '--sandbox':
         args.sandbox = true;
         break;
+      case '--setting': {
+        const v = next();
+        if (v !== 'manor' && v !== 'valley') throw new Error('--setting must be manor or valley');
+        args.setting = v;
+        break;
+      }
       case '--verbose':
       case '-v':
         args.verbose = true;
@@ -97,11 +104,13 @@ Usage: pnpm play [--seed N] [--plan plan.json] [--nights N] [--until N] [--save 
 
   --seed N       RNG seed (default 42). Same seed + plan = same log.
   --plan FILE    JSON dusk schedule; see plans/example.json.
-  --household L  Comma list of residents (count,wolfman,golem,mummy,invisible).
+  --household L  Comma list of residents from: ${PLAYABLE.join(',')}.
   --nights N     Nights to survive (default 7).
   --run R        short (7), standard (14) or long (28) nights.
   --difficulty D gentle, standard or harsh: tunes drift, rumour and the mob.
   --sandbox      The mob never ends the run.
+  --setting S    manor (default) or valley: the Welsh folklore village. The valley
+                 defaults its household to gwyllgi,cwnannwn,gwrach.
   --until N      Stop after night N without finishing the run (pair with --save).
   --save FILE    Write a save (seed, options, plan history) when the run stops.
   --load FILE    Resume from a save, then keep playing with the plan.

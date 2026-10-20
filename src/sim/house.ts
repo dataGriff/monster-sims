@@ -26,6 +26,13 @@ export function createHouse(household: readonly Archetype[] = []): House {
       { id: 'cot', name: 'camp cot', room: 'attic', broken: false },
   ];
   if (household.includes('mummy')) furniture.push({ id: 'sarcophagus', name: 'sarcophagus', room: 'crypt', broken: false });
+  if (household.includes('lakeling')) furniture.push({ id: 'tub', name: 'claw-foot tub', room: 'kitchen', broken: false });
+  if (household.includes('phantom')) furniture.push({ id: 'daybed', name: 'daybed', room: 'parlour', broken: false });
+  if (household.includes('bride')) furniture.push({ id: 'slab2', name: 'second slab', room: 'workshop', broken: false });
+  if (household.includes('hunchback')) furniture.push({ id: 'belfry', name: 'belfry bunk', room: 'roof', broken: false });
+  if (household.includes('gwyllgi')) furniture.push({ id: 'hearthrug', name: 'hearthrug', room: 'kitchen', broken: false });
+  if (household.includes('cwnannwn')) furniture.push({ id: 'kennel', name: 'kennel', room: 'roof', broken: false });
+  if (household.includes('gwrach')) furniture.push({ id: 'settle', name: 'oak settle', room: 'parlour', broken: false });
   return {
     rooms: ROOMS.map((r) => ({ id: r.id, name: r.name, windows: r.windows, lit: false, secretPassage: r.secretPassage })),
     furniture,

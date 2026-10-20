@@ -1,5 +1,5 @@
 import { createTownies } from './townies.ts';
-import type { Village, VillageMood } from './types.ts';
+import type { Setting, Village, VillageMood } from './types.ts';
 
 export const THRESHOLDS = {
   gossip: 40,
@@ -23,8 +23,8 @@ export const HUNTER_LEAVES_BELOW = 50;
 
 export const STARTING_SUSPICION = BASELINE_SUSPICION;
 
-export function createVillage(suspicion = STARTING_SUSPICION): Village {
-  return { suspicion, townies: createTownies(), allies: [], turned: [], hunterPresent: false };
+export function createVillage(suspicion = STARTING_SUSPICION, setting: Setting = 'manor'): Village {
+  return { suspicion, townies: createTownies(setting), allies: [], turned: [], hunterPresent: false };
 }
 
 export function moodFor(suspicion: number): VillageMood {

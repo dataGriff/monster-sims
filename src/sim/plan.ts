@@ -15,6 +15,19 @@ export const DEFAULT_PLAN: Plan = {
   ],
 };
 
+/** A rotation for the valley household (`--setting valley`). */
+export const VALLEY_PLAN: Plan = {
+  nights: [
+    { night: { gwyllgi: 'feed', cwnannwn: 'coverJob', gwrach: 'lieLow' } },
+    { night: { gwyllgi: 'coverJob', cwnannwn: 'sleep', gwrach: 'socialise' } },
+    { night: { gwyllgi: 'gameNight', cwnannwn: 'gameNight', gwrach: 'gameNight' } },
+    { night: { gwyllgi: 'lieLow', cwnannwn: 'feed', gwrach: 'coverJob' } },
+    { night: { gwyllgi: 'coverJob', cwnannwn: 'sleep', gwrach: 'lieLow' } },
+    { night: { gwyllgi: 'sleep', cwnannwn: 'lieLow', gwrach: 'coverJob' } },
+    { night: { gwyllgi: 'lieLow', cwnannwn: 'lieLow', gwrach: 'lieLow' } },
+  ],
+};
+
 /** The dusk schedule for night `n` (1-based). Past the end, the last entry repeats. */
 export function planForNight(plan: Plan, n: number): NightPlan {
   const entry = plan.nights[n - 1] ?? plan.nights[plan.nights.length - 1];

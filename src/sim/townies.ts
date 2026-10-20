@@ -1,4 +1,4 @@
-import type { RelationshipStage, Townie, Village } from './types.ts';
+import type { RelationshipStage, Setting, Townie, Village } from './types.ts';
 
 interface TownieSeed {
   id: string;
@@ -22,6 +22,20 @@ const ROSTER: readonly TownieSeed[] = [
   { id: 'widow', name: 'the widow at the end of the lane', job: 'lacemaker', weight: 1, abroad: 'day' },
 ];
 
+/** The valley: a chapel-and-quarry terrace for the Welsh folklore set (MM-36). */
+const VALLEY_ROSTER: readonly TownieSeed[] = [
+  { id: 'minister', name: 'the minister', job: 'chapel minister', weight: 3, abroad: 'day' },
+  { id: 'publican', name: 'the publican', job: 'publican', weight: 3, abroad: 'night' },
+  { id: 'quarryman', name: 'the quarryman', job: 'quarryman', weight: 2, abroad: 'day' },
+  { id: 'postmistress', name: 'the postmistress', job: 'postmistress', weight: 2, abroad: 'day' },
+  { id: 'shepherd', name: 'the shepherd', job: 'shepherd', weight: 1, abroad: 'night' },
+  { id: 'harpist', name: 'the harpist', job: 'harpist', weight: 2, abroad: 'night' },
+  { id: 'clerk', name: 'the colliery clerk', job: 'colliery clerk', weight: 2, abroad: 'day' },
+  { id: 'midwife', name: 'the midwife', job: 'midwife', weight: 2, abroad: 'night' },
+  { id: 'schoolmaster', name: 'the schoolmaster', job: 'schoolmaster', weight: 3, abroad: 'day' },
+  { id: 'mamgu', name: 'Mam-gu at the end of the terrace', job: 'knitter', weight: 1, abroad: 'night' },
+];
+
 export const STAGES: readonly RelationshipStage[] = ['stranger', 'friend', 'confidant', 'thrall', 'turned'];
 export const BOND_PER_STAGE = 25;
 /** Anyone can befriend a villager; only charm takes them past confidant. */
@@ -33,9 +47,10 @@ export const GOSSIP_SPREAD = 5;
 export const AWARENESS_FORGET = 5;
 export const FEED_AWARENESS = 20;
 
-export function createTownies(): Townie[] {
-  const n = ROSTER.length;
-  return ROSTER.map((t, i) => ({
+export function createTownies(setting: Setting = 'manor'): Townie[] {
+  const roster = setting === 'valley' ? VALLEY_ROSTER : ROSTER;
+  const n = roster.length;
+  return roster.map((t, i) => ({
     id: t.id,
     name: t.name,
     job: t.job,
@@ -45,26 +60,31 @@ export function createTownies(): Townie[] {
     outspoken: false,
     relationship: 'stranger',
     bond: 0,
-    neighbours: [ROSTER[(i + n - 1) % n]!.id, ROSTER[(i + 1) % n]!.id],
+    neighbours: [roster[(i + n - 1) % n]!.id, roster[(i + 1) % n]!.id],
     role: 'villager',
   }));
 }
 
 export const HUNTER_ID = 'vanhelsing';
 
-/** Van Helsing, as a townie: he lodges at the inn, so the innkeeper and the constable hear everything he says. */
-export function createHunter(): Townie {
+/**
+ * Van Helsing, as a townie: he lodges at the inn, so the innkeeper and the
+ * constable hear everything he says. In the valley the part is played by the
+ * dyn hysbys, the cunning man, who lodges over the pub.
+ */
+export function createHunter(setting: Setting = 'manor'): Townie {
+  const valley = setting === 'valley';
   return {
     id: HUNTER_ID,
-    name: 'Van Helsing',
-    job: 'monster hunter',
+    name: valley ? 'the dyn hysbys' : 'Van Helsing',
+    job: valley ? 'cunning man' : 'monster hunter',
     weight: 3,
     abroad: 'night',
     awareness: 50,
     outspoken: true,
     relationship: 'stranger',
     bond: 0,
-    neighbours: ['innkeeper', 'constable'],
+    neighbours: valley ? ['publican', 'minister'] : ['innkeeper', 'constable'],
     role: 'hunter',
   };
 }

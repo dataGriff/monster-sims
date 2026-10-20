@@ -1,6 +1,6 @@
 import { addSuspicion, adjustNeed, emit, isFullMoon, type Ctx, type NeedSource } from './context.ts';
 import { breakFurniture, breakRoom } from './house.ts';
-import { createFledgling } from './monsters.ts';
+import { createFledgling } from './fledgling.ts';
 import { chance, pick } from './rng.ts';
 import {
   BOND_PER_STAGE,
@@ -71,18 +71,7 @@ export const GOLEM_SOCIAL_CAP = 20;
 export const GOLEM_BREAK_CHANCE = 0.4;
 export const GOLEM_BREAK_COMFORT = 10;
 
-const placeholder = (id: QuirkId): Quirk => ({ id, description: 'defined below' });
-
-const QUIRKS: Record<QuirkId, Quirk> = {
-  fledgling: placeholder('fledgling'),
-  undying: placeholder('undying'),
-  unravelling: placeholder('unravelling'),
-  slowMoving: placeholder('slowMoving'),
-  hoarder: placeholder('hoarder'),
-  visibility: placeholder('visibility'),
-  prankster: placeholder('prankster'),
-  foodThief: placeholder('foodThief'),
-  lowProfile: placeholder('lowProfile'),
+const QUIRKS: Partial<Record<QuirkId, Quirk>> = {
   nocturnalFeeder: {
     id: 'nocturnalFeeder',
     description: 'Hunger only fills from "feed" at night; every other source is ignored.',
@@ -433,8 +422,15 @@ QUIRKS.fledgling = {
   },
 };
 
+/** Archetype modules add their quirks here at import time. */
+export function registerQuirk(quirk: Quirk): void {
+  QUIRKS[quirk.id] = quirk;
+}
+
 export function getQuirk(id: QuirkId): Quirk {
-  return QUIRKS[id];
+  const q = QUIRKS[id];
+  if (!q) throw new Error(`Quirk "${id}" is not registered`);
+  return q;
 }
 
 export function ignoredNeeds(monster: Monster): Set<NeedKey> {

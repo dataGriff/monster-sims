@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createGame, runNight } from '../sim/loop.ts';
-import { DEFAULT_PLAN, parsePlan, planForNight } from '../sim/plan.ts';
+import { VALLEY_HOUSEHOLD } from '../sim/monsters.ts';
+import { DEFAULT_PLAN, VALLEY_PLAN, parsePlan, planForNight } from '../sim/plan.ts';
 import { loadGame, parseSave, saveGame } from '../sim/save.ts';
 import type { Plan } from '../sim/types.ts';
 import { USAGE, parseArgs } from './args.ts';
@@ -12,7 +13,7 @@ function main(argv: readonly string[]): number {
     process.stdout.write(USAGE);
     return 0;
   }
-  let plan: Plan = DEFAULT_PLAN;
+  let plan: Plan = args.setting === 'valley' && !args.household ? VALLEY_PLAN : DEFAULT_PLAN;
   if (args.plan) {
     plan = parsePlan(JSON.parse(readFileSync(args.plan, 'utf8')));
   }
@@ -21,9 +22,10 @@ function main(argv: readonly string[]): number {
     : createGame({
         seed: args.seed,
         nightsToSurvive: args.nights,
-        ...(args.household ? { household: args.household } : {}),
+        ...(args.household ? { household: args.household } : args.setting === 'valley' ? { household: [...VALLEY_HOUSEHOLD] } : {}),
         ...(args.difficulty ? { difficulty: args.difficulty } : {}),
         ...(args.sandbox ? { sandbox: true } : {}),
+        ...(args.setting ? { setting: args.setting } : {}),
       });
   const seed = state.options.seed;
   while (state.status === 'running' && (args.until === undefined || state.night < args.until)) {
