@@ -1,7 +1,7 @@
 import { addSuspicion, adjustNeed, emit, type Ctx } from './context.ts';
 import { JOB_PAY } from './build.ts';
 import { brokenFurniture, lightRoom } from './house.ts';
-import { getQuirk, onStageReached, type ActionOutcome } from './quirks.ts';
+import { artefacts, curse, getQuirk, onStageReached, type ActionOutcome } from './quirks.ts';
 import { chance, pick } from './rng.ts';
 import { SOCIAL_BOND, SOCIAL_BOND_CAP, advanceBond, townieAbroad } from './townies.ts';
 import type { Action, ActionKind, Monster, RoomId } from './types.ts';
@@ -143,6 +143,9 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       }
       for (const m of ctx.state.monsters) adjustNeed(ctx, m, 'comfort', REPAIR_COMFORT, 'repair');
       adjustNeed(ctx, monster, 'fun', REPAIR_FUN, 'repair');
+      const relics = artefacts(ctx);
+      const relic = relics[0];
+      if (relic && !monster.quirks.includes('hoarder')) curse(ctx, monster, relic.name, 'moved');
       const text =
         fixed.length > 0
           ? `${name} repaired the ${fixed.join(' and the ')} (house comfort +${REPAIR_COMFORT}).`

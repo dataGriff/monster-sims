@@ -8,6 +8,7 @@ import { getTownie, syncAllies } from '../src/sim/townies.ts';
 import { createGame, dawn, day, dusk, night, runNight } from '../src/sim/loop.ts';
 import { createRng, nextFloat } from '../src/sim/rng.ts';
 import type {
+  Archetype,
   ActionKind,
   Event,
   GameState,
@@ -22,11 +23,16 @@ export interface GivenOptions {
   seed?: number;
   suspicion?: number;
   nights?: number;
+  household?: Archetype[];
 }
 
 /** Given a new game with seed … and Suspicion … */
 export function aNewGame(options: GivenOptions = {}): GameState {
-  const state = createGame({ seed: options.seed ?? 42, nightsToSurvive: options.nights ?? 7 });
+  const state = createGame({
+    seed: options.seed ?? 42,
+    nightsToSurvive: options.nights ?? 7,
+    ...(options.household ? { household: options.household } : {}),
+  });
   if (options.suspicion !== undefined) state.village.suspicion = options.suspicion;
   return state;
 }

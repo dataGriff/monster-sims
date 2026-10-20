@@ -32,4 +32,9 @@ describe('Feature: Text-mode runner', () => {
     expect(headers.filter((h) => h.startsWith('== Night'))).toHaveLength(7);
     for (const e of game.log) expect(body).toContain(e.text);
   });
+
+  it('Scenario: Choosing the household', () => {
+    expect(parseArgs(['--household', 'count,mummy,invisible']).household).toEqual(['count', 'mummy', 'invisible']);
+    expect(() => parseArgs(['--household', 'count,dracula'])).toThrow(/unknown monster "dracula"/);
+  });
 });

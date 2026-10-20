@@ -49,6 +49,20 @@ export const TURNED_NEIGHBOUR_AWARENESS = 30;
 export const CONFIDANT_SUSPICION = -10;
 export const FLEDGLING_FEED_SUSPICION = 2;
 export const FLEDGLING_SOCIAL_SUSPICION = 3;
+export const REWRAP_COMFORT = 30;
+export const HOARD_CHANCE = 0.3;
+export const ARTEFACT_FUN = 5;
+export const CURSE_COMFORT = -20;
+export const CURSE_HYGIENE = -10;
+export const CURSE_ANGER = 10;
+export const PRANK_FUN = 15;
+export const PRANK_COMFORT = -10;
+export const PRANK_ANGER = 5;
+export const STEAL_CHANCE = 0.5;
+export const STEAL_HUNGER = 10;
+export const STEAL_ANGER = 10;
+
+export const ARTEFACTS = ['canopic jar', 'scarab amulet', 'funerary mask', 'ushabti figure', 'basalt cat'] as const;
 export const FEED_SUSPICION_COUNT = 3;
 export const DAYLIGHT_DRAIN = 15;
 export const FULL_MOON_SUSPICION = 15;
@@ -57,8 +71,18 @@ export const GOLEM_SOCIAL_CAP = 20;
 export const GOLEM_BREAK_CHANCE = 0.4;
 export const GOLEM_BREAK_COMFORT = 10;
 
+const placeholder = (id: QuirkId): Quirk => ({ id, description: 'defined below' });
+
 const QUIRKS: Record<QuirkId, Quirk> = {
-  fledgling: { id: 'fledgling', description: 'placeholder, replaced below' },
+  fledgling: placeholder('fledgling'),
+  undying: placeholder('undying'),
+  unravelling: placeholder('unravelling'),
+  slowMoving: placeholder('slowMoving'),
+  hoarder: placeholder('hoarder'),
+  visibility: placeholder('visibility'),
+  prankster: placeholder('prankster'),
+  foodThief: placeholder('foodThief'),
+  lowProfile: placeholder('lowProfile'),
   nocturnalFeeder: {
     id: 'nocturnalFeeder',
     description: 'Hunger only fills from "feed" at night; every other source is ignored.',
@@ -197,6 +221,7 @@ const QUIRKS: Record<QuirkId, Quirk> = {
         `${monster.name} sat on the ${victim.name} and it did not survive (house comfort -${GOLEM_BREAK_COMFORT}).`,
         { monsterId: monster.id, data: { furniture: victim.id, comfort: -GOLEM_BREAK_COMFORT } },
       );
+      if (victim.artefact) curse(ctx, monster, victim.name, 'broke');
     },
   },
 };
@@ -261,6 +286,137 @@ export function onStageReached(ctx: Ctx, monster: Monster, townie: Townie, stage
       break;
   }
 }
+
+/** The Mummy's artefacts do not like being handled. */
+export function curse(ctx: Ctx, monster: Monster, artefact: string, how: 'moved' | 'broke'): void {
+  const comfort = adjustNeed(ctx, monster, 'comfort', CURSE_COMFORT, 'quirk');
+  const hygiene = adjustNeed(ctx, monster, 'hygiene', CURSE_HYGIENE, 'quirk');
+  const anger = adjustNeed(ctx, monster, 'anger', CURSE_ANGER, 'quirk');
+  emit(
+    ctx,
+    'curse',
+    `${monster.name} ${how} the ${artefact}. A dry wind went through the house and ${monster.name} has felt wrong ever since (comfort ${comfort}, hygiene ${hygiene}, anger +${anger}).`,
+    { monsterId: monster.id, data: { artefact, how } },
+  );
+}
+
+export function artefacts(ctx: Ctx) {
+  return ctx.state.house.furniture.filter((f) => f.artefact);
+}
+
+QUIRKS.undying = {
+  id: 'undying',
+  description: 'Energy is always full and there is no bladder to speak of.',
+  ignoredNeeds: ['energy', 'bladder'],
+  onDusk: (_ctx, monster) => {
+    monster.needs.energy = 100;
+    monster.needs.bladder = 100;
+  },
+  filterNeedChange: (_ctx, _m, key, delta) => (key === 'energy' || key === 'bladder' ? 0 : delta),
+};
+
+QUIRKS.unravelling = {
+  id: 'unravelling',
+  description: 'Comfort drops as the bandages unravel; only a night in the sarcophagus rewraps them.',
+  afterAction: (ctx, monster, action, outcome) => {
+    if (action.kind !== 'sleep') return;
+    const bed = ctx.state.house.furniture.find((f) => f.id === monster.bed);
+    if (bed && !bed.broken) {
+      const comfort = adjustNeed(ctx, monster, 'comfort', REWRAP_COMFORT, 'sleep');
+      outcome.text = `${monster.name} lay in the ${bed.name} and was rewrapped by morning (comfort +${comfort}).`;
+      outcome.data['comfort'] = comfort;
+    } else {
+      outcome.text = `${monster.name} had no sarcophagus to lie in and unravelled a little more on the floor.`;
+    }
+  },
+};
+
+QUIRKS.slowMoving = {
+  id: 'slowMoving',
+  description: 'Every action costs two slots: the night after acting he is still finishing.',
+  afterAction: (_ctx, monster) => {
+    monster.memo['busyNights'] = 1;
+  },
+};
+
+QUIRKS.hoarder = {
+  id: 'hoarder',
+  description: 'Brings artefacts home from his outings; they are cursed to anyone else who moves them.',
+  afterAction: (ctx, monster, action, outcome) => {
+    if (action.kind !== 'feed' && action.kind !== 'socialise' && action.kind !== 'coverJob') return;
+    if (!chance(ctx.state.rng, HOARD_CHANCE)) return;
+    const name = pick(ctx.state.rng, ARTEFACTS);
+    const n = artefacts(ctx).length + 1;
+    ctx.state.house.furniture.push({ id: `artefact-${n}`, name, room: monster.bedroom, broken: false, artefact: true });
+    outcome.text += ` He came home with a ${name} under one arm.`;
+    outcome.data['artefact'] = name;
+  },
+  onDawn: (ctx, monster) => {
+    const n = artefacts(ctx).length;
+    if (n > 0) adjustNeed(ctx, monster, 'fun', ARTEFACT_FUN * n, 'quirk');
+  },
+};
+
+QUIRKS.visibility = {
+  id: 'visibility',
+  description: 'Social only fills while visible (bandages and hat on), which he only bothers with to go out.',
+  onDusk: (_ctx, monster) => {
+    monster.memo['visible'] = monster.assignedAction === 'socialise';
+  },
+  filterNeedChange: (_ctx, monster, key, delta) => (key === 'social' && delta > 0 && !monster.memo['visible'] ? 0 : delta),
+  afterAction: (_ctx, monster, action, outcome) => {
+    if (action.kind === 'gameNight' && !monster.memo['visible']) outcome.text += ' Nobody could see him, so nobody dealt him in.';
+    if (action.kind === 'socialise') outcome.text += ' He had wrapped up and put the hat on for it.';
+  },
+};
+
+QUIRKS.prankster = {
+  id: 'prankster',
+  description: 'Lying low means pranks: fun for him, less comfort for whoever he picks on.',
+  afterAction: (ctx, monster, action, outcome) => {
+    if (action.kind !== 'lieLow') return;
+    const others = ctx.state.monsters.filter((m) => m.id !== monster.id);
+    const fun = adjustNeed(ctx, monster, 'fun', PRANK_FUN, 'lieLow');
+    if (others.length === 0) return;
+    const victim = pick(ctx.state.rng, others);
+    const comfort = adjustNeed(ctx, victim, 'comfort', PRANK_COMFORT, 'house');
+    adjustNeed(ctx, victim, 'anger', PRANK_ANGER, 'house');
+    outcome.text = `${monster.name} stayed in and played pranks; ${victim.name} found the ${victim.bed} short-sheeted (fun +${fun + Number(outcome.data['fun'] ?? 0)}, ${victim.name} comfort ${comfort}).`;
+    outcome.data['victim'] = victim.id;
+  },
+};
+
+QUIRKS.foodThief = {
+  id: 'foodThief',
+  description: 'Steals food from the pantry and from plates; the household notices even if they cannot see him.',
+  onNight: (ctx, monster) => {
+    if (!chance(ctx.state.rng, STEAL_CHANCE)) return;
+    const eaters = ctx.state.monsters.filter((m) => m.id !== monster.id && !m.quirks.includes('nocturnalFeeder'));
+    if (eaters.length === 0) return;
+    const victim = pick(ctx.state.rng, eaters);
+    const lost = -adjustNeed(ctx, victim, 'hunger', -STEAL_HUNGER, 'house');
+    adjustNeed(ctx, monster, 'hunger', STEAL_HUNGER, 'feed');
+    const anger = adjustNeed(ctx, victim, 'anger', STEAL_ANGER, 'house');
+    emit(ctx, 'foodStolen', `${victim.name}'s supper walked off the plate by itself (hunger -${lost}, anger +${anger}).`, {
+      monsterId: monster.id,
+      data: { victim: victim.id, hunger: lost },
+    });
+  },
+};
+
+QUIRKS.lowProfile = {
+  id: 'lowProfile',
+  description: 'Hardest of the household to notice: whatever Suspicion his actions raise is halved.',
+  afterAction: (ctx, _m, _a, outcome) => {
+    const raised = Number(outcome.data['suspicion'] ?? 0);
+    if (raised <= 0) return;
+    const refund = Math.floor(raised / 2);
+    if (refund === 0) return;
+    addSuspicion(ctx, -refund);
+    outcome.data['suspicion'] = raised - refund;
+    outcome.text += ' Hardly anyone noticed.';
+  },
+};
 
 QUIRKS.fledgling = {
   id: 'fledgling',

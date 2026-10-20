@@ -2,7 +2,7 @@ export * from './types.ts';
 export { createRng, nextFloat, nextInt, chance, pick } from './rng.ts';
 export { clamp, makeNeeds, SATISFACTION_KEYS } from './needs.ts';
 export { isFullMoon, findMonster } from './context.ts';
-export { createCount, createWolfMan, createGolem, createFledgling, createMonsters } from './monsters.ts';
+export { createCount, createWolfMan, createGolem, createMummy, createInvisibleMan, createFledgling, createArchetype, createMonsters, DEFAULT_HOUSEHOLD, PLAYABLE } from './monsters.ts';
 export { createHouse, breakFurniture, breakRoom, brokenFurniture, roomExposure, mostExposedRoom, getRoom } from './house.ts';
 export * as townies from './townies.ts';
 export * as anger from './anger.ts';

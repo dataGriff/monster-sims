@@ -1,5 +1,5 @@
 import { makeNeeds } from './needs.ts';
-import type { Monster, Townie } from './types.ts';
+import type { Archetype, Monster, Townie } from './types.ts';
 
 export function createCount(): Monster {
   return {
@@ -16,6 +16,7 @@ export function createCount(): Monster {
     daylightActive: false,
     assignedAction: null,
     assignedDayAction: null,
+    memo: {},
   };
 }
 
@@ -33,6 +34,7 @@ export function createWolfMan(): Monster {
     daylightActive: true,
     assignedAction: null,
     assignedDayAction: null,
+    memo: {},
   };
 }
 
@@ -51,6 +53,7 @@ export function createGolem(): Monster {
     daylightActive: false,
     assignedAction: null,
     assignedDayAction: null,
+    memo: {},
   };
 }
 
@@ -70,10 +73,70 @@ export function createFledgling(townie: Townie): Monster {
     daylightActive: false,
     assignedAction: null,
     assignedDayAction: null,
+    memo: {},
   };
 }
 
+export function createMummy(): Monster {
+  return {
+    id: 'mummy',
+    archetype: 'mummy',
+    name: 'The Mummy',
+    bedroom: 'crypt',
+    bed: 'sarcophagus',
+    needs: makeNeeds({ energy: 100, bladder: 100, hygiene: 40 }),
+    // Energy and bladder never move. Comfort goes as the bandages do.
+    decay: { hunger: 5, energy: 0, social: 5, fun: 8, hygiene: 5, comfort: 12, bladder: 0 },
+    quirks: ['undying', 'unravelling', 'slowMoving', 'hoarder'],
+    coverJob: { title: 'museum night porter', relief: 8, failChance: 0.2 },
+    daylightActive: false,
+    assignedAction: null,
+    assignedDayAction: null,
+    memo: { busyNights: 0 },
+  };
+}
+
+export function createInvisibleMan(): Monster {
+  return {
+    id: 'invisible',
+    archetype: 'invisible',
+    name: 'The Invisible Man',
+    bedroom: 'parlour',
+    bed: 'armchair',
+    needs: makeNeeds({ social: 40 }),
+    decay: { hunger: 15, energy: 10, social: 10, fun: 10, hygiene: 15, comfort: 5, bladder: 15 },
+    quirks: ['visibility', 'prankster', 'foodThief', 'lowProfile'],
+    coverJob: { title: 'census clerk', relief: 8, failChance: 0.2 },
+    daylightActive: false,
+    assignedAction: null,
+    assignedDayAction: null,
+    memo: { visible: false },
+  };
+}
+
+export const DEFAULT_HOUSEHOLD: readonly Archetype[] = ['count', 'wolfman', 'golem'];
+
+/** Archetypes a household can start with (a fledgling only ever arrives by being turned). */
+export const PLAYABLE: readonly Archetype[] = ['count', 'wolfman', 'golem', 'mummy', 'invisible'];
+
+export function createArchetype(a: Archetype): Monster {
+  switch (a) {
+    case 'count':
+      return createCount();
+    case 'wolfman':
+      return createWolfMan();
+    case 'golem':
+      return createGolem();
+    case 'mummy':
+      return createMummy();
+    case 'invisible':
+      return createInvisibleMan();
+    case 'fledgling':
+      throw new Error('A fledgling joins by being turned, not at launch');
+  }
+}
+
 /** The household at launch, in the order their actions resolve each night. */
-export function createMonsters(): Monster[] {
-  return [createCount(), createWolfMan(), createGolem()];
+export function createMonsters(household: readonly Archetype[] = DEFAULT_HOUSEHOLD): Monster[] {
+  return household.map(createArchetype);
 }

@@ -1,4 +1,4 @@
-import type { House, Room, RoomId } from './types.ts';
+import type { Archetype, House, Room, RoomId } from './types.ts';
 
 export const ROOMS: readonly Omit<Room, 'lit'>[] = [
   { id: 'crypt', name: 'the crypt', windows: 0, secretPassage: true },
@@ -14,10 +14,8 @@ export const WINDOW_EXPOSURE = 10;
 export const LIGHT_EXPOSURE = 15;
 export const BROKEN_EXPOSURE = 5;
 
-export function createHouse(): House {
-  return {
-    rooms: ROOMS.map((r) => ({ id: r.id, name: r.name, windows: r.windows, lit: false, secretPassage: r.secretPassage })),
-    furniture: [
+export function createHouse(household: readonly Archetype[] = []): House {
+  const furniture: House['furniture'] = [
       { id: 'coffin', name: 'coffin', room: 'crypt', broken: false },
       { id: 'table', name: 'kitchen table', room: 'kitchen', broken: false },
       { id: 'stove', name: 'stove', room: 'kitchen', broken: false },
@@ -26,7 +24,11 @@ export function createHouse(): House {
       { id: 'bench', name: 'workbench', room: 'workshop', broken: false },
       { id: 'slab', name: 'stone slab', room: 'workshop', broken: false },
       { id: 'cot', name: 'camp cot', room: 'attic', broken: false },
-    ],
+  ];
+  if (household.includes('mummy')) furniture.push({ id: 'sarcophagus', name: 'sarcophagus', room: 'crypt', broken: false });
+  return {
+    rooms: ROOMS.map((r) => ({ id: r.id, name: r.name, windows: r.windows, lit: false, secretPassage: r.secretPassage })),
+    furniture,
     lightningRod: true,
     householdAnger: 10,
     coin: STARTING_COIN,

@@ -13,7 +13,7 @@
 export type MonsterId = string;
 
 /** The built-in archetypes. A monster's `archetype` picks its quirks and text. */
-export type Archetype = 'count' | 'wolfman' | 'golem' | 'fledgling';
+export type Archetype = 'count' | 'wolfman' | 'golem' | 'mummy' | 'invisible' | 'fledgling';
 
 export const NEED_KEYS = [
   'hunger',
@@ -59,7 +59,15 @@ export type QuirkId =
   | 'villagersFlee'
   | 'lightningPowered'
   | 'heavyHanded'
-  | 'fledgling';
+  | 'fledgling'
+  | 'undying'
+  | 'unravelling'
+  | 'slowMoving'
+  | 'hoarder'
+  | 'visibility'
+  | 'prankster'
+  | 'foodThief'
+  | 'lowProfile';
 
 export interface CoverJob {
   /** Human-readable job title, e.g. "night watchman". */
@@ -89,6 +97,8 @@ export interface Monster {
   assignedAction: ActionKind | null;
   /** Action queued for the day slot (only honoured when daylightActive). */
   assignedDayAction: ActionKind | null;
+  /** Archetype-specific scratch state (busy nights, visibility...). Plain data. */
+  memo: Record<string, number | boolean | string>;
 }
 
 export interface Action {
@@ -127,6 +137,8 @@ export interface Furniture {
   name: string;
   room: RoomId;
   broken: boolean;
+  /** Something the Mummy brought home. Moving it is unwise. */
+  artefact?: boolean;
 }
 
 export type DefenceId = 'drawbridge' | 'fogMachine' | 'decoyCoffins' | 'organ';
@@ -198,6 +210,8 @@ export interface GameOptions {
   seed: number;
   nightsToSurvive?: number;
   suspicion?: number;
+  /** Who lives here at launch. Defaults to the Count, the Wolf Man and the Golem. */
+  household?: Archetype[];
 }
 
 export interface Plan {

@@ -15,3 +15,8 @@ Feature: Text-mode runner
   Scenario: The verbose log prints one plain-English line per event
     When seed 42 is played and formatted verbosely
     Then there is exactly one line per event, grouped under night and phase headers
+
+  Scenario: Choosing the household
+    When "--household count,mummy,invisible" is parsed
+    Then the household is count, mummy and invisible
+    And "--household count,dracula" is rejected

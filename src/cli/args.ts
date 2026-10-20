@@ -1,5 +1,9 @@
+import { PLAYABLE } from '../sim/monsters.ts';
+import type { Archetype } from '../sim/types.ts';
+
 export interface CliArgs {
   seed: number;
+  household?: Archetype[];
   plan?: string;
   save?: string;
   load?: string;
@@ -27,6 +31,16 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       case '--plan':
         args.plan = next();
         break;
+      case '--household': {
+        const list = next().split(',').map((x) => x.trim()).filter(Boolean);
+        for (const a of list) {
+          if (!(PLAYABLE as readonly string[]).includes(a)) {
+            throw new Error(`--household: unknown monster "${a}" (expected ${PLAYABLE.join(', ')})`);
+          }
+        }
+        args.household = list as Archetype[];
+        break;
+      }
       case '--save':
         args.save = next();
         break;
@@ -65,6 +79,7 @@ Usage: pnpm play [--seed N] [--plan plan.json] [--nights N] [--until N] [--save 
 
   --seed N       RNG seed (default 42). Same seed + plan = same log.
   --plan FILE    JSON dusk schedule; see plans/example.json.
+  --household L  Comma list of residents (count,wolfman,golem,mummy,invisible).
   --nights N     Nights to survive (default 7).
   --until N      Stop after night N without finishing the run (pair with --save).
   --save FILE    Write a save (seed, options, plan history) when the run stops.

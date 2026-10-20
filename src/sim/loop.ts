@@ -53,8 +53,8 @@ export function createGame(options: GameOptions): GameState {
     night: 0,
     nightsToSurvive: options.nightsToSurvive ?? 7,
     rng: createRng(options.seed),
-    monsters: createMonsters(),
-    house: createHouse(),
+    monsters: createMonsters(options.household),
+    house: createHouse(options.household ?? []),
     village: createVillage(options.suspicion),
     pendingSuspicion: 0,
     noise: 0,
@@ -84,6 +84,18 @@ export function dusk(state: GameState, plan: NightPlan): void {
     parts.push(`${m.name}: ${m.assignedAction ?? 'idle'}`);
   }
   emit(ctx, 'dusk', `Dusk falls on night ${state.night}. Plans: ${parts.join(', ')}.`);
+  for (const m of state.monsters) {
+    const busy = Number(m.memo['busyNights'] ?? 0);
+    if (busy <= 0) continue;
+    m.memo['busyNights'] = busy - 1;
+    if (m.assignedAction !== null) {
+      emit(ctx, 'busy', `${m.name} is still finishing last night's business and cannot ${m.assignedAction} yet.`, {
+        monsterId: m.id,
+        data: { lostAction: m.assignedAction },
+      });
+      m.assignedAction = null;
+    }
+  }
   for (const id of [...Object.keys(plan.night), ...Object.keys(plan.day ?? {})]) {
     if (!ids.has(id)) emit(ctx, 'planIgnored', `Nobody called "${id}" lives here; that assignment was ignored.`, { data: { monster: id } });
   }
