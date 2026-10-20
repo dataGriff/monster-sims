@@ -16,3 +16,5 @@ export { CATALOGUE, buy, catalogueItem, JOB_PAY } from './build.ts';
 export * as mob from './mob.ts';
 export { saveGame, loadGame, parseSave } from './save.ts';
 export type { SaveFile } from './save.ts';
+export { DIFFICULTIES, RUN_LENGTHS, tuning } from './difficulty.ts';
+export type { Tuning, RunLength } from './difficulty.ts';

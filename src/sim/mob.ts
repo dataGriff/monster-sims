@@ -7,7 +7,8 @@ import { adjustNeed, emit, type Ctx } from './context.ts';
 import { breakRoom, getRoom, mostExposedRoom, roomExposure } from './house.ts';
 import { chance } from './rng.ts';
 import type { Monster } from './types.ts';
-import { MOB_ATTACK_CHANCE, THRESHOLDS } from './village.ts';
+import { tuning } from './difficulty.ts';
+import { THRESHOLDS } from './village.ts';
 
 export const MOB_COMFORT = 15;
 export const MOB_ANGER = 10;
@@ -22,7 +23,8 @@ export function mobByDay(ctx: Ctx): void {
   const { state } = ctx;
   const house = state.house;
   if (state.village.suspicion < THRESHOLDS.mob) return;
-  const p = house.defences.organ ? MOB_ATTACK_CHANCE * ORGAN_FACTOR : MOB_ATTACK_CHANCE;
+  const base = tuning(state).mobChance;
+  const p = house.defences.organ ? base * ORGAN_FACTOR : base;
   if (!chance(state.rng, p)) {
     if (house.defences.organ) emit(ctx, 'organ', 'The organ played a dirge at dawn and the square emptied a little.', {});
     return;

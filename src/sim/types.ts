@@ -76,6 +76,13 @@ export interface CoverJob {
   relief: number;
   /** Base probability (0–1) that a shift goes wrong. */
   failChance: number;
+  /** 1–3. Each promotion adds relief and a grander title. */
+  level: number;
+  /** Successful shifts since the last promotion or failure. */
+  streak: number;
+  /** 0–100 workplace suspicion: how much the employer has noticed. 100 means sacked. */
+  heat: number;
+  employed: boolean;
 }
 
 export interface Monster {
@@ -206,12 +213,18 @@ export interface NightPlan {
   build?: string[];
 }
 
+export type Difficulty = 'gentle' | 'standard' | 'harsh';
+
 export interface GameOptions {
   seed: number;
   nightsToSurvive?: number;
   suspicion?: number;
   /** Who lives here at launch. Defaults to the Count, the Wolf Man and the Golem. */
   household?: Archetype[];
+  /** Tunes Suspicion drift, rumour and the mob. Default standard. */
+  difficulty?: Difficulty;
+  /** Sandbox: the mob never ends the run. */
+  sandbox?: boolean;
 }
 
 export interface Plan {

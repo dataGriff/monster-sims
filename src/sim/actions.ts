@@ -18,6 +18,18 @@ export const COVER_JOB_FUN = -10;
 export const COVER_JOB_FAIL_SUSPICION = 5;
 export const GOSSIP_FAIL_PENALTY = 0.1;
 export const ALLY_FAIL_BONUS = 0.05;
+export const PROMOTION_STREAK = 3;
+export const PROMOTION_RELIEF = 2;
+export const MAX_LEVEL = 3;
+export const HEAT_ON_FAIL = 15;
+export const HEAT_ON_SUCCESS = -5;
+export const HEAT_QUESTIONS = 50;
+export const HEAT_QUESTIONS_PENALTY = 0.1;
+export const HEAT_SACKED = 100;
+export const CLASH_PENALTY = 0.15;
+export const CLASH_ENERGY = -10;
+export const NO_JOB_FUN = -5;
+const LEVEL_TITLES = ['', '', 'senior ', 'head '];
 export const REPAIR_MAX = 2;
 export const REPAIR_COMFORT = 10;
 export const REPAIR_FUN = 10;
@@ -64,12 +76,18 @@ export function actionRoom(monster: Monster, kind: ActionKind): RoomId | null {
 }
 
 /** Probability that a cover-job shift goes wrong for this monster right now. */
-export function coverJobFailChance(ctx: Ctx, monster: Monster): number {
+export function coverJobFailChance(ctx: Ctx, monster: Monster, slot: 'night' | 'day' = 'night'): number {
   const village = ctx.state.village;
   let p = monster.coverJob.failChance;
   if (moodRank(moodFor(village.suspicion)) >= moodRank('gossip')) p += GOSSIP_FAIL_PENALTY;
+  if (monster.coverJob.heat >= HEAT_QUESTIONS) p += HEAT_QUESTIONS_PENALTY;
+  if (slot === 'day' && monster.assignedAction === 'coverJob') p += CLASH_PENALTY;
   p -= ALLY_FAIL_BONUS * village.allies.length;
   return Math.max(0, Math.min(1, p));
+}
+
+export function jobTitle(monster: Monster): string {
+  return `${LEVEL_TITLES[monster.coverJob.level] ?? ''}${monster.coverJob.title}`;
 }
 
 function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
@@ -112,22 +130,44 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       return outcome;
     }
     case 'coverJob': {
+      const job = monster.coverJob;
+      if (!job.employed) {
+        const fun = adjustNeed(ctx, monster, 'fun', NO_JOB_FUN, 'coverJob');
+        return { text: `${name} has no job to go to any more and sat in the kitchen (fun ${fun}).`, data: { success: false, unemployed: true } };
+      }
       adjustNeed(ctx, monster, 'energy', COVER_JOB_ENERGY, 'coverJob');
       adjustNeed(ctx, monster, 'fun', COVER_JOB_FUN, 'coverJob');
-      const failed = chance(ctx.state.rng, coverJobFailChance(ctx, monster));
+      const clash = action.slot === 'day' && monster.assignedAction === 'coverJob';
+      if (clash) adjustNeed(ctx, monster, 'energy', CLASH_ENERGY, 'coverJob');
+      const clashNote = clash ? ' Two shifts in one turn of the clock took it out of him.' : '';
+      const failed = chance(ctx.state.rng, coverJobFailChance(ctx, monster, action.slot));
       if (failed) {
+        job.streak = 0;
+        job.heat = Math.min(HEAT_SACKED, job.heat + HEAT_ON_FAIL);
         addSuspicion(ctx, COVER_JOB_FAIL_SUSPICION);
-        return {
-          text: `${name}'s shift as ${monster.coverJob.title} went badly; people talked (Suspicion +${COVER_JOB_FAIL_SUSPICION}).`,
-          data: { success: false, suspicion: COVER_JOB_FAIL_SUSPICION },
-        };
+        let text = `${name}'s shift as ${jobTitle(monster)} went badly; people talked (Suspicion +${COVER_JOB_FAIL_SUSPICION}).${clashNote}`;
+        if (job.heat >= HEAT_SACKED) {
+          job.employed = false;
+          text += ` The employer has had enough: ${name} is sacked.`;
+        } else if (job.heat >= HEAT_QUESTIONS) {
+          text += ' The employer is starting to ask questions.';
+        }
+        return { text, data: { success: false, suspicion: COVER_JOB_FAIL_SUSPICION, heat: job.heat, sacked: !job.employed } };
       }
-      addSuspicion(ctx, -monster.coverJob.relief);
+      addSuspicion(ctx, -job.relief);
       ctx.state.house.coin += JOB_PAY;
-      return {
-        text: `${name} worked a quiet shift as ${monster.coverJob.title} (Suspicion -${monster.coverJob.relief}, +${JOB_PAY} coin).`,
-        data: { success: true, suspicion: -monster.coverJob.relief, coin: JOB_PAY },
-      };
+      job.heat = Math.max(0, job.heat + HEAT_ON_SUCCESS);
+      job.streak += 1;
+      let text = `${name} worked a quiet shift as ${jobTitle(monster)} (Suspicion -${job.relief}, +${JOB_PAY} coin).${clashNote}`;
+      let promoted = false;
+      if (job.streak >= PROMOTION_STREAK && job.level < MAX_LEVEL) {
+        job.level += 1;
+        job.relief += PROMOTION_RELIEF;
+        job.streak = 0;
+        promoted = true;
+        text += ` Promoted: ${name} is now ${jobTitle(monster)} (relief ${job.relief}).`;
+      }
+      return { text, data: { success: true, suspicion: -job.relief, coin: JOB_PAY, promoted, level: job.level } };
     }
     case 'repair': {
       const house = ctx.state.house;

@@ -18,7 +18,13 @@ function main(argv: readonly string[]): number {
   }
   const state = args.load
     ? loadGame(parseSave(JSON.parse(readFileSync(args.load, 'utf8'))))
-    : createGame({ seed: args.seed, nightsToSurvive: args.nights, ...(args.household ? { household: args.household } : {}) });
+    : createGame({
+        seed: args.seed,
+        nightsToSurvive: args.nights,
+        ...(args.household ? { household: args.household } : {}),
+        ...(args.difficulty ? { difficulty: args.difficulty } : {}),
+        ...(args.sandbox ? { sandbox: true } : {}),
+      });
   const seed = state.options.seed;
   while (state.status === 'running' && (args.until === undefined || state.night < args.until)) {
     runNight(state, planForNight(plan, state.night + 1));

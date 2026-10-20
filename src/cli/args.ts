@@ -1,9 +1,12 @@
+import { DIFFICULTIES, RUN_LENGTHS, type RunLength } from '../sim/difficulty.ts';
 import { PLAYABLE } from '../sim/monsters.ts';
-import type { Archetype } from '../sim/types.ts';
+import type { Archetype, Difficulty } from '../sim/types.ts';
 
 export interface CliArgs {
   seed: number;
   household?: Archetype[];
+  difficulty?: Difficulty;
+  sandbox: boolean;
   plan?: string;
   save?: string;
   load?: string;
@@ -15,7 +18,7 @@ export interface CliArgs {
 }
 
 export function parseArgs(argv: readonly string[]): CliArgs {
-  const args: CliArgs = { seed: 42, nights: 7, json: false, verbose: false, help: false };
+  const args: CliArgs = { seed: 42, nights: 7, json: false, verbose: false, sandbox: false, help: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = () => {
@@ -58,6 +61,21 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       case '--json':
         args.json = true;
         break;
+      case '--difficulty': {
+        const d = next();
+        if (!(d in DIFFICULTIES)) throw new Error(`--difficulty must be one of ${Object.keys(DIFFICULTIES).join(', ')}`);
+        args.difficulty = d as Difficulty;
+        break;
+      }
+      case '--run': {
+        const r = next();
+        if (!(r in RUN_LENGTHS)) throw new Error(`--run must be one of ${Object.keys(RUN_LENGTHS).join(', ')}`);
+        args.nights = RUN_LENGTHS[r as RunLength];
+        break;
+      }
+      case '--sandbox':
+        args.sandbox = true;
+        break;
       case '--verbose':
       case '-v':
         args.verbose = true;
@@ -81,6 +99,9 @@ Usage: pnpm play [--seed N] [--plan plan.json] [--nights N] [--until N] [--save 
   --plan FILE    JSON dusk schedule; see plans/example.json.
   --household L  Comma list of residents (count,wolfman,golem,mummy,invisible).
   --nights N     Nights to survive (default 7).
+  --run R        short (7), standard (14) or long (28) nights.
+  --difficulty D gentle, standard or harsh: tunes drift, rumour and the mob.
+  --sandbox      The mob never ends the run.
   --until N      Stop after night N without finishing the run (pair with --save).
   --save FILE    Write a save (seed, options, plan history) when the run stops.
   --load FILE    Resume from a save, then keep playing with the plan.

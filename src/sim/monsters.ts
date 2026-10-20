@@ -1,5 +1,9 @@
 import { makeNeeds } from './needs.ts';
-import type { Archetype, Monster, Townie } from './types.ts';
+import type { Archetype, CoverJob, Monster, Townie } from './types.ts';
+
+export function job(title: string, relief: number, failChance: number): CoverJob {
+  return { title, relief, failChance, level: 1, streak: 0, heat: 0, employed: true };
+}
 
 export function createCount(): Monster {
   return {
@@ -12,7 +16,7 @@ export function createCount(): Monster {
     // No energy decay at dawn: daylight is what drains him. Hygiene never moves.
     decay: { hunger: 15, energy: 0, social: 10, fun: 8, hygiene: 0, comfort: 5, bladder: 10 },
     quirks: ['nocturnalFeeder', 'daylightDrain', 'noReflection', 'charm'],
-    coverJob: { title: 'night watchman', relief: 8, failChance: 0.2 },
+    coverJob: job('night watchman', 8, 0.2),
     daylightActive: false,
     assignedAction: null,
     assignedDayAction: null,
@@ -30,7 +34,7 @@ export function createWolfMan(): Monster {
     needs: makeNeeds(),
     decay: { hunger: 15, energy: 10, social: 10, fun: 8, hygiene: 10, comfort: 5, bladder: 15 },
     quirks: ['fullMoon', 'dayWalker'],
-    coverJob: { title: 'carter', relief: 8, failChance: 0.2 },
+    coverJob: job('carter', 8, 0.2),
     daylightActive: true,
     assignedAction: null,
     assignedDayAction: null,
@@ -49,7 +53,7 @@ export function createGolem(): Monster {
     // Clay is patient: slow hunger, slow energy, no bladder.
     decay: { hunger: 5, energy: 5, social: 5, fun: 8, hygiene: 5, comfort: 5, bladder: 0 },
     quirks: ['villagersFlee', 'lightningPowered', 'heavyHanded'],
-    coverJob: { title: 'gravedigger', relief: 8, failChance: 0.15 },
+    coverJob: job('gravedigger', 8, 0.15),
     daylightActive: false,
     assignedAction: null,
     assignedDayAction: null,
@@ -59,17 +63,17 @@ export function createGolem(): Monster {
 
 /** A villager the Count has turned. Sleeps in the crypt and keeps their old job, badly. */
 export function createFledgling(townie: Townie): Monster {
-  const job = townie.job.charAt(0).toUpperCase() + townie.job.slice(1);
+  const title = townie.job.charAt(0).toUpperCase() + townie.job.slice(1);
   return {
     id: `turned-${townie.id}`,
     archetype: 'fledgling',
-    name: `The ${job} (turned)`,
+    name: `The ${title} (turned)`,
     bedroom: 'crypt',
     bed: 'coffin',
     needs: makeNeeds({ hunger: 40, hygiene: 100, anger: 0 }),
     decay: { hunger: 20, energy: 0, social: 10, fun: 8, hygiene: 0, comfort: 5, bladder: 10 },
     quirks: ['nocturnalFeeder', 'daylightDrain', 'noReflection', 'fledgling'],
-    coverJob: { title: `${townie.job}'s night work`, relief: 6, failChance: 0.3 },
+    coverJob: job(`${townie.job}'s night work`, 6, 0.3),
     daylightActive: false,
     assignedAction: null,
     assignedDayAction: null,
@@ -88,7 +92,7 @@ export function createMummy(): Monster {
     // Energy and bladder never move. Comfort goes as the bandages do.
     decay: { hunger: 5, energy: 0, social: 5, fun: 8, hygiene: 5, comfort: 12, bladder: 0 },
     quirks: ['undying', 'unravelling', 'slowMoving', 'hoarder'],
-    coverJob: { title: 'museum night porter', relief: 8, failChance: 0.2 },
+    coverJob: job('museum night porter', 8, 0.2),
     daylightActive: false,
     assignedAction: null,
     assignedDayAction: null,
@@ -106,7 +110,7 @@ export function createInvisibleMan(): Monster {
     needs: makeNeeds({ social: 40 }),
     decay: { hunger: 15, energy: 10, social: 10, fun: 10, hygiene: 15, comfort: 5, bladder: 15 },
     quirks: ['visibility', 'prankster', 'foodThief', 'lowProfile'],
-    coverJob: { title: 'census clerk', relief: 8, failChance: 0.2 },
+    coverJob: job('census clerk', 8, 0.2),
     daylightActive: false,
     assignedAction: null,
     assignedDayAction: null,

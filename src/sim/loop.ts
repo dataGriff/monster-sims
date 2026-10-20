@@ -8,6 +8,7 @@ import { createMonsters } from './monsters.ts';
 import { SATISFACTION_KEYS, clamp } from './needs.ts';
 import { DEFAULT_PLAN, planForNight } from './plan.ts';
 import { getQuirk, ignoredNeeds } from './quirks.ts';
+import { SANDBOX_RESET, tuning } from './difficulty.ts';
 import { createRng } from './rng.ts';
 import {
   AWARENESS_FORGET,
@@ -26,8 +27,6 @@ import {
   BASELINE_SUSPICION,
   HUNTER_LEAVES_BELOW,
   MOOD_TEXT,
-  NIGHTLY_RUMOUR,
-  QUIET_NIGHT_DRIFT,
   SNOOPING_SUSPICION,
   THRESHOLDS,
   createVillage,
@@ -55,7 +54,7 @@ export function createGame(options: GameOptions): GameState {
     rng: createRng(options.seed),
     monsters: createMonsters(options.household),
     house: createHouse(options.household ?? []),
-    village: createVillage(options.suspicion),
+    village: createVillage(options.suspicion ?? (options.difficulty ? tuning({ options } as GameState).startingSuspicion : undefined)),
     pendingSuspicion: 0,
     noise: 0,
     departed: [],
@@ -286,14 +285,15 @@ export function dawn(state: GameState): void {
     });
   }
 
+  const tune = tuning(state);
   if (state.noise > 0) {
-    state.pendingSuspicion += NIGHTLY_RUMOUR;
-    emit(ctx, 'rumour', `The village had something to talk about (Suspicion +${NIGHTLY_RUMOUR}).`, {
-      data: { suspicion: NIGHTLY_RUMOUR, noise: state.noise },
+    state.pendingSuspicion += tune.rumour;
+    emit(ctx, 'rumour', `The village had something to talk about (Suspicion +${tune.rumour}).`, {
+      data: { suspicion: tune.rumour, noise: state.noise },
     });
   } else {
     const gap = BASELINE_SUSPICION - before;
-    const drift = Math.sign(gap) * Math.min(QUIET_NIGHT_DRIFT, Math.abs(gap));
+    const drift = Math.sign(gap) * Math.min(tune.quietDrift, Math.abs(gap));
     if (drift !== 0) {
       state.pendingSuspicion += drift;
       const text =
@@ -307,9 +307,9 @@ export function dawn(state: GameState): void {
   const after = clamp(before + state.pendingSuspicion);
   village.suspicion = after;
   state.pendingSuspicion = 0;
-  const rumourNote = state.noise > 0 ? ` (incl. rumour +${NIGHTLY_RUMOUR})` : '';
+  const rumourNote = state.noise > 0 ? ` (incl. rumour +${tune.rumour})` : '';
   emit(ctx, 'suspicion', `Suspicion ${before} -> ${after}${rumourNote}.`, {
-    data: { before, after, delta: after - before, rumour: state.noise > 0 ? NIGHTLY_RUMOUR : 0 },
+    data: { before, after, delta: after - before, rumour: state.noise > 0 ? tune.rumour : 0 },
   });
 
   const moodAfter = moodFor(after);
@@ -322,6 +322,13 @@ export function dawn(state: GameState): void {
   if (after >= THRESHOLDS.mobAtDoor) {
     if (mobAtTheDoor(ctx)) {
       recomputeHouseholdAnger(state);
+      return;
+    }
+    if (state.options.sandbox) {
+      village.suspicion = SANDBOX_RESET;
+      emit(ctx, 'sandbox', `The mob broke down the door, found the household at cards, and in this sandbox simply went home again (Suspicion -> ${SANDBOX_RESET}).`, {
+        data: { suspicion: SANDBOX_RESET },
+      });
       return;
     }
     state.status = 'lost';
