@@ -17,7 +17,7 @@ describe('Feature: Text-mode runner', () => {
     for (let n = 1; n <= 7; n++) {
       const headline = lines.find((l) => l.startsWith(`Night ${n} —`));
       expect(headline, `night ${n}`).toBeDefined();
-      expect(headline).toMatch(/Suspicion \d+ -> \d+\.$/);
+      expect(headline).toMatch(/Suspicion \d+ -> \d+( \(incl\. rumour \+\d+\))?\.$/);
     }
     expect(lines.filter((l) => /^Night \d+ —/.test(l))).toHaveLength(7);
     expect(lines.at(-2)).toMatch(/^Result: /);

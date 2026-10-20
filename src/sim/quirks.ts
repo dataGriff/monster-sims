@@ -1,7 +1,17 @@
 import { addSuspicion, adjustNeed, emit, isFullMoon, type Ctx, type NeedSource } from './context.ts';
 import { breakFurniture, breakRoom } from './house.ts';
+import { createFledgling } from './monsters.ts';
 import { chance, pick } from './rng.ts';
-import type { Action, Monster, NeedKey, QuirkId } from './types.ts';
+import {
+  BOND_PER_STAGE,
+  FEED_AWARENESS,
+  advanceBond,
+  isAlly,
+  stageRank,
+  syncAllies,
+  townieAbroad,
+} from './townies.ts';
+import type { Action, Monster, NeedKey, QuirkId, Townie } from './types.ts';
 
 /** What an action did; quirks may rewrite `text` before it is logged. */
 export interface ActionOutcome {
@@ -32,18 +42,13 @@ export interface Quirk {
   ) => number;
 }
 
-export const VILLAGERS = [
-  'the baker',
-  'the miller',
-  'the innkeeper',
-  'the schoolmistress',
-  'the blacksmith',
-  'the ferryman',
-  'the apothecary',
-] as const;
-
-export const CHARM_RECRUIT = 25;
+export const CHARM_BOND = BOND_PER_STAGE;
 export const CHARM_SUSPICION = 5;
+export const TURNED_SUSPICION = 20;
+export const TURNED_NEIGHBOUR_AWARENESS = 30;
+export const CONFIDANT_SUSPICION = -10;
+export const FLEDGLING_FEED_SUSPICION = 2;
+export const FLEDGLING_SOCIAL_SUSPICION = 3;
 export const FEED_SUSPICION_COUNT = 3;
 export const DAYLIGHT_DRAIN = 15;
 export const FULL_MOON_SUSPICION = 15;
@@ -53,6 +58,7 @@ export const GOLEM_BREAK_CHANCE = 0.4;
 export const GOLEM_BREAK_COMFORT = 10;
 
 const QUIRKS: Record<QuirkId, Quirk> = {
+  fledgling: { id: 'fledgling', description: 'placeholder, replaced below' },
   nocturnalFeeder: {
     id: 'nocturnalFeeder',
     description: 'Hunger only fills from "feed" at night; every other source is ignored.',
@@ -60,8 +66,23 @@ const QUIRKS: Record<QuirkId, Quirk> = {
       key === 'hunger' && delta > 0 && source !== 'feed' ? 0 : delta,
     afterAction: (ctx, monster, action, outcome) => {
       if (action.kind !== 'feed') return;
+      const village = ctx.state.village;
+      const donor = village.townies.find((t) => isAlly(t) && t.relationship !== 'turned');
+      if (donor) {
+        outcome.text = `${monster.name} fed quietly; ${donor.name} rolled up a sleeve without being asked.`;
+        outcome.data['donor'] = donor.id;
+        return;
+      }
+      const abroad = townieAbroad(village, 'night');
+      const victim = abroad.length > 0 ? pick(ctx.state.rng, abroad) : undefined;
       addSuspicion(ctx, FEED_SUSPICION_COUNT);
-      outcome.text = `${monster.name} went out to feed; a villager woke up pale.`;
+      if (victim) {
+        victim.awareness = Math.min(100, victim.awareness + FEED_AWARENESS);
+        outcome.text = `${monster.name} went out to feed; ${victim.name} woke up pale.`;
+        outcome.data['victim'] = victim.id;
+      } else {
+        outcome.text = `${monster.name} went out to feed; a villager woke up pale.`;
+      }
       outcome.data['suspicion'] = FEED_SUSPICION_COUNT;
     },
   },
@@ -85,26 +106,19 @@ const QUIRKS: Record<QuirkId, Quirk> = {
   },
   charm: {
     id: 'charm',
-    description: 'Socialising charms a villager: +recruit progress, +Suspicion.',
+    description: 'Socialising charms a villager up the tree friend → confidant → thrall → turned: +bond, +Suspicion.',
     afterAction: (ctx, monster, action, outcome) => {
       if (action.kind !== 'socialise') return;
-      const villager = pick(ctx.state.rng, VILLAGERS);
       const village = ctx.state.village;
-      village.recruitProgress = Math.min(100, village.recruitProgress + CHARM_RECRUIT);
+      const mark = currentMark(ctx, village.townies);
+      if (!mark) return;
       addSuspicion(ctx, CHARM_SUSPICION);
-      outcome.text = `${monster.name} charmed ${villager}.`;
-      outcome.data['recruitProgress'] = village.recruitProgress;
+      const reached = advanceBond(mark, CHARM_BOND, 'turned');
+      outcome.text = `${monster.name} charmed ${mark.name}.`;
+      outcome.data['townie'] = mark.id;
+      outcome.data['relationship'] = mark.relationship;
       outcome.data['suspicion'] = CHARM_SUSPICION;
-      if (village.recruitProgress >= 100) {
-        village.recruitProgress = 0;
-        village.allies.push(villager);
-        addSuspicion(ctx, -10);
-        const who = villager.charAt(0).toUpperCase() + villager.slice(1);
-        emit(ctx, 'recruited', `${who} now keeps the manor's secrets (Suspicion -10).`, {
-          monsterId: monster.id,
-          data: { ally: villager },
-        });
-      }
+      if (reached) onStageReached(ctx, monster, mark, reached);
     },
   },
   fullMoon: {
@@ -150,6 +164,14 @@ const QUIRKS: Record<QuirkId, Quirk> = {
       if (key !== 'social' || delta <= 0) return delta;
       return Math.max(0, Math.min(delta, GOLEM_SOCIAL_CAP - monster.needs.social));
     },
+    afterAction: (_ctx, monster, action, outcome) => {
+      if (action.kind !== 'socialise') return;
+      const social = Number(outcome.data['social'] ?? 0);
+      outcome.text =
+        social > 0
+          ? `${monster.name} bought a plant and no one came, but the walk did him good (social +${social}).`
+          : `${monster.name} bought a plant and no one came.`;
+    },
   },
   lightningPowered: {
     id: 'lightningPowered',
@@ -176,6 +198,82 @@ const QUIRKS: Record<QuirkId, Quirk> = {
         { monsterId: monster.id, data: { furniture: victim.id, comfort: -GOLEM_BREAK_COMFORT } },
       );
     },
+  },
+};
+
+function currentMark(ctx: Ctx, townies: Townie[]): Townie | undefined {
+  const candidates = townies.filter((t) => t.relationship !== 'turned');
+  const started = candidates.filter((t) => t.relationship !== 'stranger' || t.bond > 0);
+  if (started.length > 0) {
+    return started.reduce((best, t) =>
+      stageRank(t.relationship) * 100 + t.bond > stageRank(best.relationship) * 100 + best.bond ? t : best,
+    );
+  }
+  const abroad = candidates.filter((t) => t.abroad === 'night');
+  const pool = abroad.length > 0 ? abroad : candidates;
+  return pool.length > 0 ? pick(ctx.state.rng, pool) : undefined;
+}
+
+/** Shared by charm and ordinary socialising: what a new relationship stage does. */
+export function onStageReached(ctx: Ctx, monster: Monster, townie: Townie, stage: Townie['relationship']): void {
+  const village = ctx.state.village;
+  const who = townie.name.charAt(0).toUpperCase() + townie.name.slice(1);
+  switch (stage) {
+    case 'friend':
+      emit(ctx, 'relationship', `${who} now counts ${monster.name} a friend.`, {
+        monsterId: monster.id,
+        data: { townie: townie.id, stage },
+      });
+      break;
+    case 'confidant':
+      syncAllies(village);
+      addSuspicion(ctx, CONFIDANT_SUSPICION);
+      emit(ctx, 'relationship', `${who} now keeps the manor's secrets (Suspicion ${CONFIDANT_SUSPICION}).`, {
+        monsterId: monster.id,
+        data: { townie: townie.id, stage, suspicion: CONFIDANT_SUSPICION },
+      });
+      break;
+    case 'thrall':
+      emit(ctx, 'relationship', `${who} is ${monster.name}'s thrall now and runs errands for the manor.`, {
+        monsterId: monster.id,
+        data: { townie: townie.id, stage },
+      });
+      break;
+    case 'turned': {
+      const fledgling = createFledgling(townie);
+      ctx.state.monsters.push(fledgling);
+      village.turned.push(townie.name);
+      syncAllies(village);
+      for (const id of townie.neighbours) {
+        const n = village.townies.find((t) => t.id === id);
+        if (n && !isAlly(n)) n.awareness = Math.min(100, n.awareness + TURNED_NEIGHBOUR_AWARENESS);
+      }
+      addSuspicion(ctx, TURNED_SUSPICION);
+      emit(
+        ctx,
+        'turned',
+        `${who} did not go home. ${fledgling.name} has moved into the crypt and the neighbours have noticed (Suspicion +${TURNED_SUSPICION}).`,
+        { monsterId: fledgling.id, data: { townie: townie.id, stage, suspicion: TURNED_SUSPICION } },
+      );
+      break;
+    }
+    case 'stranger':
+      break;
+  }
+}
+
+QUIRKS.fledgling = {
+  id: 'fledgling',
+  description: 'Newly turned: feeds clumsily and is recognised in the village.',
+  afterAction: (ctx, monster, action, outcome) => {
+    if (action.kind === 'feed' && outcome.data['donor'] === undefined) {
+      addSuspicion(ctx, FLEDGLING_FEED_SUSPICION);
+      outcome.text += ` Clumsy work (Suspicion +${FLEDGLING_FEED_SUSPICION}).`;
+    }
+    if (action.kind === 'socialise') {
+      addSuspicion(ctx, FLEDGLING_SOCIAL_SUSPICION);
+      outcome.text = `${monster.name} went into the village and was recognised (Suspicion +${FLEDGLING_SOCIAL_SUSPICION}).`;
+    }
   },
 };
 

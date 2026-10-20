@@ -1,8 +1,9 @@
 import { addSuspicion, adjustNeed, emit, type Ctx } from './context.ts';
-import { brokenFurniture } from './house.ts';
-import { getQuirk, type ActionOutcome } from './quirks.ts';
-import { chance } from './rng.ts';
-import type { Action, ActionKind, Monster } from './types.ts';
+import { brokenFurniture, lightRoom } from './house.ts';
+import { getQuirk, onStageReached, type ActionOutcome } from './quirks.ts';
+import { chance, pick } from './rng.ts';
+import { SOCIAL_BOND, SOCIAL_BOND_CAP, advanceBond, townieAbroad } from './townies.ts';
+import type { Action, ActionKind, Monster, RoomId } from './types.ts';
 import { moodFor, moodRank } from './village.ts';
 
 export const FEED_HUNGER = 50;
@@ -24,6 +25,14 @@ export const LIE_LOW_COMFORT = 10;
 export const LIE_LOW_HUNGER = 5;
 export const LIE_LOW_BLADDER = 30;
 export const LIE_LOW_FUN = 10;
+/** Group action: only works when the house is calm. */
+export const GAME_NIGHT_MAX_ANGER = 25;
+export const GAME_NIGHT_FUN = 25;
+export const GAME_NIGHT_SOCIAL = 15;
+export const GAME_NIGHT_ANGER = -10;
+export const BICKER_FUN = -5;
+export const BICKER_ANGER = 5;
+export const SOLITAIRE_FUN = 5;
 
 export const ACTION_LABEL: Record<ActionKind, string> = {
   feed: 'feed',
@@ -32,7 +41,26 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   coverJob: 'cover job',
   repair: 'repair',
   lieLow: 'lie low',
+  gameNight: 'game night',
 };
+
+/** Which room an action lights up at night, if any. Lit windows raise exposure. */
+export function actionRoom(monster: Monster, kind: ActionKind): RoomId | null {
+  switch (kind) {
+    case 'feed':
+      return monster.quirks.includes('nocturnalFeeder') ? null : 'kitchen';
+    case 'sleep':
+      return monster.bedroom;
+    case 'repair':
+      return 'workshop';
+    case 'gameNight':
+      return 'parlour';
+    case 'socialise':
+    case 'coverJob':
+    case 'lieLow':
+      return null;
+  }
+}
 
 /** Probability that a cover-job shift goes wrong for this monster right now. */
 export function coverJobFailChance(ctx: Ctx, monster: Monster): number {
@@ -63,11 +91,21 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       const social = adjustNeed(ctx, monster, 'social', SOCIAL_GAIN, 'socialise');
       const fun = adjustNeed(ctx, monster, 'fun', SOCIAL_FUN, 'socialise');
       addSuspicion(ctx, SOCIAL_SUSPICION);
-      const text =
-        social > 0
-          ? `${name} spent the evening at the inn (social +${social}).`
-          : `${name} bought a plant and no one came.`;
-      return { text, data: { social, fun, suspicion: SOCIAL_SUSPICION } };
+      const outcome: ActionOutcome = {
+        text: social > 0 ? `${name} spent the evening at the inn (social +${social}).` : `${name} went out and nobody would talk to him.`,
+        data: { social, fun, suspicion: SOCIAL_SUSPICION },
+      };
+      if (social > 0 && !monster.quirks.includes('charm')) {
+        const abroad = townieAbroad(ctx.state.village, 'night');
+        if (abroad.length > 0) {
+          const met = pick(ctx.state.rng, abroad);
+          const reached = advanceBond(met, SOCIAL_BOND, SOCIAL_BOND_CAP);
+          outcome.text = `${name} spent the evening at the inn with ${met.name} (social +${social}).`;
+          outcome.data['townie'] = met.id;
+          if (reached) onStageReached(ctx, monster, met, reached);
+        }
+      }
+      return outcome;
     }
     case 'coverJob': {
       adjustNeed(ctx, monster, 'energy', COVER_JOB_ENERGY, 'coverJob');
@@ -106,6 +144,29 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
           : `${name} tidied the house; nothing needed fixing (house comfort +${REPAIR_COMFORT}).`;
       return { text, data: { fixed: fixed.length, comfort: REPAIR_COMFORT } };
     }
+    case 'gameNight': {
+      const players = ctx.state.monsters.filter((m) => m.assignedAction === 'gameNight');
+      if (players.length < 2) {
+        const fun = adjustNeed(ctx, monster, 'fun', SOLITAIRE_FUN, 'gameNight');
+        return { text: `${name} laid out a game for one and played patience (fun +${fun}).`, data: { fun, players: 1 } };
+      }
+      if (ctx.state.house.householdAnger >= GAME_NIGHT_MAX_ANGER) {
+        const fun = adjustNeed(ctx, monster, 'fun', BICKER_FUN, 'gameNight');
+        const anger = adjustNeed(ctx, monster, 'anger', BICKER_ANGER, 'gameNight');
+        return {
+          text: `${name} tried to start a game but everyone was too cross to play (fun ${fun}, anger +${anger}).`,
+          data: { fun, anger, players: players.length, bickered: true },
+        };
+      }
+      const fun = adjustNeed(ctx, monster, 'fun', GAME_NIGHT_FUN, 'gameNight');
+      const social = adjustNeed(ctx, monster, 'social', GAME_NIGHT_SOCIAL, 'gameNight');
+      const anger = adjustNeed(ctx, monster, 'anger', GAME_NIGHT_ANGER, 'gameNight');
+      const first = players[0]?.id === monster.id;
+      const text = first
+        ? `${name} dealt cards in the parlour for the household (fun +${fun}, social +${social}, anger ${anger}).`
+        : `${name} joined the game (fun +${fun}, social +${social}, anger ${anger}).`;
+      return { text, data: { fun, social, anger, players: players.length } };
+    }
     case 'lieLow': {
       addSuspicion(ctx, LIE_LOW_SUSPICION);
       adjustNeed(ctx, monster, 'comfort', LIE_LOW_COMFORT, 'lieLow');
@@ -134,6 +195,10 @@ export function resolveAction(ctx: Ctx, monster: Monster, requested: Action): vo
   }
   if (action === null) return;
 
+  if (action.slot === 'night') {
+    const room = actionRoom(monster, action.kind);
+    if (room) lightRoom(ctx.state.house, room);
+  }
   const outcome = perform(ctx, monster, action);
   for (const id of monster.quirks) getQuirk(id).afterAction?.(ctx, monster, action, outcome);
 

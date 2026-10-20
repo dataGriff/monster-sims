@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   aNewGame,
+  befriend,
   dawn,
   day,
   duskAndNight,
@@ -60,19 +61,27 @@ describe('Feature: The Count', () => {
     expect(fuming).toHaveLength(0);
   });
 
-  it('Scenario: Charm fills recruit progress and raises Suspicion', () => {
+  it('Scenario: Charm makes a friend and raises Suspicion', () => {
     const game = aNewGame({ seed: 42, suspicion: 30 });
     fullNight(game, plan({ count: 'socialise' }));
     expectLogSays(game, 'charmed', 'count');
-    expect(game.village.recruitProgress).toBe(25);
+    expect(game.village.townies.find((t) => t.relationship === 'friend')).toBeDefined();
     expect(suspicionAtEndOfNight(game)).toBe(41);
   });
 
-  it('Scenario: Enough charm recruits a villager who keeps the secret', () => {
+  it('Scenario: Enough charm turns a villager into a new resident', () => {
     const game = aNewGame({ seed: 42, suspicion: 30 });
     fullNights(game, plan({ count: 'socialise' }), 4);
-    expect(game.village.allies).toHaveLength(1);
-    expect(game.village.recruitProgress).toBe(0);
-    expectLogSays(game, "now keeps the manor's secrets");
+    expect(game.village.turned).toHaveLength(1);
+    expect(game.monsters).toHaveLength(4);
+    expectLogSays(game, 'did not go home');
+  });
+
+  it('Scenario: An ally makes feeding safe', () => {
+    const game = aNewGame({ seed: 42, suspicion: 30 });
+    befriend(game, 'baker', 'confidant');
+    fullNight(game, plan({ count: 'feed' }));
+    expectLogSays(game, 'rolled up a sleeve', 'count');
+    expect(suspicionAtEndOfNight(game)).toBe(30);
   });
 });

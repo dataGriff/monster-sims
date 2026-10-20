@@ -31,14 +31,20 @@ Feature: The Count
     Then the Count's hygiene is still 10
     And the Count never fumes about hygiene
 
-  Scenario: Charm fills recruit progress and raises Suspicion
+  Scenario: Charm makes a friend and raises Suspicion
     When the Count socialises for the night
     Then the log says the Count "charmed"
-    And recruit progress is 25
+    And one villager is now a friend
     And the night ends with Suspicion 41
 
-  Scenario: Enough charm recruits a villager who keeps the secret
+  Scenario: Enough charm turns a villager into a new resident
     When the Count socialises for 4 full nights
-    Then the manor has 1 ally
-    And recruit progress is back to 0
-    And the log says a villager "now keeps the manor's secrets"
+    Then one villager has been turned
+    And the household has 4 members
+    And the log says the Count's mark "did not go home"
+
+  Scenario: An ally makes feeding safe
+    Given the baker is a confidant of the manor
+    When the Count feeds for a full night
+    Then the log says the Count "rolled up a sleeve"
+    And the night ends with Suspicion 30

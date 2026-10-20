@@ -4,6 +4,7 @@
  */
 import { expect } from 'vitest';
 import { findMonster } from '../src/sim/context.ts';
+import { getTownie, syncAllies } from '../src/sim/townies.ts';
 import { createGame, dawn, day, dusk, night, runNight } from '../src/sim/loop.ts';
 import { createRng, nextFloat } from '../src/sim/rng.ts';
 import type {
@@ -13,6 +14,7 @@ import type {
   MonsterId,
   NeedKey,
   NightPlan,
+  RelationshipStage,
   RngState,
 } from '../src/sim/types.ts';
 
@@ -127,6 +129,26 @@ export function rollAtLeast(p: number): (rng: RngState) => boolean {
   return (rng) => nextFloat(rng) >= p;
 }
 
+/** Consume one roll without caring what it is (e.g. a `pick`). */
+export function anyRoll(): (rng: RngState) => boolean {
+  return (rng) => {
+    nextFloat(rng);
+    return true;
+  };
+}
+
 export function rolls(...checks: Array<(rng: RngState) => boolean>): (rng: RngState) => boolean {
   return (rng) => checks.every((check) => check(rng));
+}
+
+/** Given <townie> is a <stage> of the manor. */
+export function befriend(state: GameState, townieId: string, stage: RelationshipStage): void {
+  const t = getTownie(state.village, townieId);
+  t.relationship = stage;
+  t.bond = 0;
+  syncAllies(state.village);
+}
+
+export function townie(state: GameState, id: string) {
+  return getTownie(state.village, id);
 }

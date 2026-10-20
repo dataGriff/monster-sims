@@ -1,6 +1,6 @@
 import { ACTION_KINDS, type ActionKind, type MonsterId, type NightPlan, type Plan } from './types.ts';
 
-const MONSTER_IDS: readonly MonsterId[] = ['count', 'wolfman', 'golem'];
+const SLUG = /^[a-z][a-z0-9-]*$/;
 
 /** A sensible 7-night rotation used by `pnpm play` when no plan is given. */
 export const DEFAULT_PLAN: Plan = {
@@ -8,8 +8,8 @@ export const DEFAULT_PLAN: Plan = {
     { night: { count: 'feed', wolfman: 'coverJob', golem: 'sleep' } },
     { night: { count: 'socialise', wolfman: 'sleep', golem: 'repair' }, day: { wolfman: 'coverJob' } },
     { night: { count: 'coverJob', wolfman: 'feed', golem: 'socialise' } },
-    { night: { count: 'feed', wolfman: 'coverJob', golem: 'sleep' } },
-    { night: { count: 'lieLow', wolfman: 'socialise', golem: 'coverJob' }, day: { wolfman: 'coverJob' } },
+    { night: { count: 'gameNight', wolfman: 'gameNight', golem: 'gameNight' } },
+    { night: { count: 'feed', wolfman: 'coverJob', golem: 'sleep' }, day: { wolfman: 'coverJob' } },
     { night: { count: 'coverJob', wolfman: 'repair', golem: 'feed' } },
     { night: { count: 'lieLow', wolfman: 'lieLow', golem: 'lieLow' } },
   ],
@@ -32,13 +32,13 @@ function parseAssignments(raw: unknown, where: string): Partial<Record<MonsterId
   }
   const out: Partial<Record<MonsterId, ActionKind>> = {};
   for (const [key, value] of Object.entries(raw)) {
-    if (!(MONSTER_IDS as readonly string[]).includes(key)) {
-      throw new Error(`${where}: unknown monster "${key}" (expected ${MONSTER_IDS.join(', ')})`);
+    if (!SLUG.test(key)) {
+      throw new Error(`${where}: "${key}" is not a monster id (lowercase slug such as count, wolfman, golem)`);
     }
     if (!isActionKind(value)) {
       throw new Error(`${where}.${key}: unknown action "${String(value)}" (expected ${ACTION_KINDS.join(', ')})`);
     }
-    out[key as MonsterId] = value;
+    out[key] = value;
   }
   return out;
 }

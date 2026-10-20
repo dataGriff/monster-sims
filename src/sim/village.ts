@@ -1,3 +1,4 @@
+import { createTownies } from './townies.ts';
 import type { Village, VillageMood } from './types.ts';
 
 export const THRESHOLDS = {
@@ -21,7 +22,7 @@ export const MOB_ATTACK_CHANCE = 0.5;
 export const STARTING_SUSPICION = BASELINE_SUSPICION;
 
 export function createVillage(suspicion = STARTING_SUSPICION): Village {
-  return { suspicion, recruitProgress: 0, allies: [] };
+  return { suspicion, townies: createTownies(), allies: [], turned: [] };
 }
 
 export function moodFor(suspicion: number): VillageMood {

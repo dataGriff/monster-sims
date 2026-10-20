@@ -1,16 +1,21 @@
 import type { House, Room, RoomId } from './types.ts';
 
-export const ROOMS: readonly Room[] = [
-  { id: 'crypt', name: 'the crypt' },
-  { id: 'kitchen', name: 'the kitchen' },
-  { id: 'parlour', name: 'the parlour' },
-  { id: 'workshop', name: 'the workshop' },
-  { id: 'roof', name: 'the roof' },
+export const ROOMS: readonly Omit<Room, 'lit'>[] = [
+  { id: 'crypt', name: 'the crypt', windows: 0, secretPassage: true },
+  { id: 'kitchen', name: 'the kitchen', windows: 2, secretPassage: false },
+  { id: 'parlour', name: 'the parlour', windows: 3, secretPassage: false },
+  { id: 'workshop', name: 'the workshop', windows: 1, secretPassage: false },
+  { id: 'attic', name: 'the attic', windows: 1, secretPassage: false },
+  { id: 'roof', name: 'the roof', windows: 0, secretPassage: false },
 ];
+
+export const WINDOW_EXPOSURE = 10;
+export const LIGHT_EXPOSURE = 15;
+export const BROKEN_EXPOSURE = 5;
 
 export function createHouse(): House {
   return {
-    rooms: ROOMS.map((r) => ({ id: r.id, name: r.name })),
+    rooms: ROOMS.map((r) => ({ id: r.id, name: r.name, windows: r.windows, lit: false, secretPassage: r.secretPassage })),
     furniture: [
       { id: 'coffin', name: 'coffin', room: 'crypt', broken: false },
       { id: 'table', name: 'kitchen table', room: 'kitchen', broken: false },
@@ -19,10 +24,51 @@ export function createHouse(): House {
       { id: 'piano', name: 'piano', room: 'parlour', broken: false },
       { id: 'bench', name: 'workbench', room: 'workshop', broken: false },
       { id: 'slab', name: 'stone slab', room: 'workshop', broken: false },
+      { id: 'cot', name: 'camp cot', room: 'attic', broken: false },
     ],
     lightningRod: true,
     householdAnger: 10,
   };
+}
+
+export function getRoom(house: House, id: RoomId): Room {
+  const room = house.rooms.find((r) => r.id === id);
+  if (!room) throw new Error(`No room "${id}"`);
+  return room;
+}
+
+/**
+ * How visible a room is from the village tonight: windows, light behind them,
+ * and wreckage that looks wrong from the lane. 0–100.
+ */
+export function roomExposure(house: House, id: RoomId): number {
+  const room = getRoom(house, id);
+  const broken = house.furniture.filter((f) => f.room === id && f.broken).length;
+  const score = room.windows * WINDOW_EXPOSURE + (room.lit ? LIGHT_EXPOSURE : 0) + broken * BROKEN_EXPOSURE;
+  return Math.max(0, Math.min(100, score));
+}
+
+/** The room the village is most likely to point at. Ties go to the first room listed. */
+export function mostExposedRoom(house: House): Room {
+  let best = house.rooms[0];
+  if (!best) throw new Error('house has no rooms');
+  for (const room of house.rooms) {
+    if (roomExposure(house, room.id) > roomExposure(house, best.id)) best = room;
+  }
+  return best;
+}
+
+/** Rooms with a light on behind at least one window. */
+export function litWindowedRooms(house: House): Room[] {
+  return house.rooms.filter((r) => r.lit && r.windows > 0);
+}
+
+export function lightRoom(house: House, id: RoomId): void {
+  getRoom(house, id).lit = true;
+}
+
+export function dousedLights(house: House): void {
+  for (const r of house.rooms) r.lit = false;
 }
 
 export function breakFurniture(house: House, id: string): void {

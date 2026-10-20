@@ -1,11 +1,19 @@
 import { resolveAction } from './actions.ts';
+import { maybeFight, maybeRogueNight, moveOuts, recomputeHouseholdAnger } from './anger.ts';
 import { addSuspicion, adjustNeed, emit, type Ctx } from './context.ts';
-import { breakRoom, createHouse, roomName } from './house.ts';
+import { breakRoom, createHouse, dousedLights, litWindowedRooms, roomName } from './house.ts';
 import { createMonsters } from './monsters.ts';
 import { SATISFACTION_KEYS, clamp } from './needs.ts';
 import { DEFAULT_PLAN, planForNight } from './plan.ts';
 import { getQuirk, ignoredNeeds } from './quirks.ts';
 import { chance, createRng, pick } from './rng.ts';
+import {
+  AWARENESS_FORGET,
+  GOSSIP_SPREAD,
+  OUTSPOKEN_AT,
+  OUTSPOKEN_SUSPICION,
+  isAlly,
+} from './townies.ts';
 import type { GameState, Monster, NightPlan, Plan, RoomId } from './types.ts';
 import {
   ANGRY_HOUSE_LEVEL,
@@ -29,6 +37,8 @@ export const ANGER_RISE = 10;
 export const ANGER_FALL = 5;
 export const MOB_COMFORT = 15;
 export const MOB_ANGER = 10;
+export const LIGHT_SUSPICION = 1;
+export const THRALL_SUSPICION = -1;
 
 export interface GameOptions {
   seed: number;
@@ -46,6 +56,7 @@ export function createGame(options: GameOptions): GameState {
     village: createVillage(options.suspicion),
     pendingSuspicion: 0,
     noise: 0,
+    departed: [],
     log: [],
     status: 'running',
   };
@@ -60,23 +71,31 @@ export function dusk(state: GameState, plan: NightPlan): void {
   state.night += 1;
   state.pendingSuspicion = 0;
   state.noise = 0;
+  dousedLights(state.house);
   const ctx: Ctx = { state, phase: 'dusk' };
 
   const parts: string[] = [];
+  const ids = new Set(state.monsters.map((m) => m.id));
   for (const m of state.monsters) {
     m.assignedAction = plan.night[m.id] ?? null;
     m.assignedDayAction = plan.day?.[m.id] ?? null;
     parts.push(`${m.name}: ${m.assignedAction ?? 'idle'}`);
   }
   emit(ctx, 'dusk', `Dusk falls on night ${state.night}. Plans: ${parts.join(', ')}.`);
+  for (const id of [...Object.keys(plan.night), ...Object.keys(plan.day ?? {})]) {
+    if (!ids.has(id)) emit(ctx, 'planIgnored', `Nobody called "${id}" lives here; that assignment was ignored.`, { data: { monster: id } });
+  }
 
   for (const m of state.monsters) for (const q of quirkHooks(m)) q.onDusk?.(ctx, m);
+  maybeRogueNight(ctx);
 }
 
 /** Night: resolve every queued action in household order, then night-time quirks. */
 export function night(state: GameState): void {
   const ctx: Ctx = { state, phase: 'night' };
-  for (const m of state.monsters) {
+  // Snapshot: a turning can add a resident mid-night, and they act from tomorrow.
+  const residents = state.monsters.slice();
+  for (const m of residents) {
     if (m.assignedAction === null) {
       emit(ctx, 'idle', `${m.name} did nothing in particular.`, { monsterId: m.id });
       continue;
@@ -84,6 +103,57 @@ export function night(state: GameState): void {
     resolveAction(ctx, m, { monsterId: m.id, kind: m.assignedAction, slot: 'night' });
   }
   for (const m of state.monsters) for (const q of quirkHooks(m)) q.onNight?.(ctx, m);
+  maybeFight(ctx);
+}
+
+/** Dawn: the village compares notes. Awareness spreads along fences and the outspoken add Suspicion. */
+function villageTalks(ctx: Ctx): void {
+  const { state } = ctx;
+  const village = state.village;
+  if (state.noise === 0) {
+    for (const t of village.townies) t.awareness = Math.max(0, t.awareness - AWARENESS_FORGET);
+  }
+  const spreading = moodRank(moodFor(village.suspicion)) >= moodRank('gossip');
+  const loud = village.townies.filter((t) => t.awareness >= OUTSPOKEN_AT && !isAlly(t) && t.relationship !== 'turned');
+  if (spreading) {
+    for (const t of loud) {
+      for (const id of t.neighbours) {
+        const n = village.townies.find((x) => x.id === id);
+        if (n && !isAlly(n) && n.relationship !== 'turned') n.awareness = Math.min(100, n.awareness + GOSSIP_SPREAD);
+      }
+    }
+    if (loud.length > 0) {
+      emit(ctx, 'gossip', `${loud.map((t) => t.name).join(' and ')} talked over the fence and the neighbours listened.`, {
+        data: { spreaders: loud.length },
+      });
+    }
+  }
+  for (const t of village.townies) {
+    if (t.awareness >= OUTSPOKEN_AT && !t.outspoken && !isAlly(t) && t.relationship !== 'turned') {
+      t.outspoken = true;
+      state.pendingSuspicion += OUTSPOKEN_SUSPICION;
+      const who = t.name.charAt(0).toUpperCase() + t.name.slice(1);
+      emit(ctx, 'outspoken', `${who} is now saying out loud that something is wrong at the manor (Suspicion +${OUTSPOKEN_SUSPICION}).`, {
+        data: { townie: t.id, suspicion: OUTSPOKEN_SUSPICION },
+      });
+    }
+  }
+  const thralls = village.townies.filter((t) => t.relationship === 'thrall');
+  if (thralls.length > 0) {
+    const relief = THRALL_SUSPICION * thralls.length;
+    state.pendingSuspicion += relief;
+    emit(ctx, 'thralls', `${thralls.map((t) => t.name).join(' and ')} quietly talked the rumours down (Suspicion ${relief}).`, {
+      data: { thralls: thralls.length, suspicion: relief },
+    });
+  }
+  const lit = litWindowedRooms(state.house);
+  if (lit.length > 0) {
+    const delta = LIGHT_SUSPICION * lit.length;
+    state.pendingSuspicion += delta;
+    emit(ctx, 'lightsSeen', `Lamplight showed in ${lit.map((r) => r.name).join(' and ')} (Suspicion +${delta}).`, {
+      data: { rooms: lit.length, suspicion: delta },
+    });
+  }
 }
 
 function applyDecay(ctx: Ctx, monster: Monster): void {
@@ -132,13 +202,17 @@ export function dawn(state: GameState): void {
     updateAnger(ctx, m);
   }
   for (const m of state.monsters) for (const q of quirkHooks(m)) q.onDawn?.(ctx, m);
-
-  const total = state.monsters.reduce((sum, m) => sum + m.needs.anger, 0);
-  state.house.householdAnger = Math.round(total / Math.max(1, state.monsters.length));
+  moveOuts(ctx);
+  recomputeHouseholdAnger(state);
+  if (state.status !== 'running') {
+    emitSummary(ctx);
+    return;
+  }
 
   const village = state.village;
   const before = village.suspicion;
   const moodBefore = moodFor(before);
+  villageTalks(ctx);
   if (moodRank(moodBefore) >= moodRank('snooping') && !laidLowTonight(state)) {
     addSuspicion(ctx, SNOOPING_SUSPICION);
     emit(ctx, 'snooping', `Van Helsing snooped around the grounds and nobody was lying low (Suspicion +${SNOOPING_SUSPICION}).`, {
@@ -173,7 +247,10 @@ export function dawn(state: GameState): void {
   const after = clamp(before + state.pendingSuspicion);
   village.suspicion = after;
   state.pendingSuspicion = 0;
-  emit(ctx, 'suspicion', `Suspicion ${before} -> ${after}.`, { data: { before, after, delta: after - before } });
+  const rumourNote = state.noise > 0 ? ` (incl. rumour +${NIGHTLY_RUMOUR})` : '';
+  emit(ctx, 'suspicion', `Suspicion ${before} -> ${after}${rumourNote}.`, {
+    data: { before, after, delta: after - before, rumour: state.noise > 0 ? NIGHTLY_RUMOUR : 0 },
+  });
 
   const moodAfter = moodFor(after);
   if (moodRank(moodAfter) > moodRank(moodBefore) && moodAfter !== 'mobAtDoor') {

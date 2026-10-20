@@ -8,9 +8,11 @@ Feature: Dusk plans
     When a plan file that is a bare array of assignments is parsed
     Then it yields 1 night with no day slot
 
-  Scenario: Unknown monsters and actions are rejected
-    Then a plan naming the monster "mummy" is rejected
+  Scenario: Malformed monster ids and unknown actions are rejected
+    Then a plan naming the monster "The Mummy!" is rejected
+    But a plan naming "turned-baker" is accepted, because turned villagers join the household
     And a plan assigning the action "haunt" is rejected
+    And at dusk an assignment for someone who does not live here is reported and ignored
 
   Scenario: A short plan repeats its last night
     Given a plan with 2 nights

@@ -15,8 +15,17 @@ const DETAIL_KINDS = new Set([
   'victory',
   'summary',
   'quietNight',
-  'rumour',
   'needCritical',
+  'lightsSeen',
+  'fight',
+  'rogue',
+  'moveOut',
+  'relationship',
+  'turned',
+  'gossip',
+  'outspoken',
+  'thralls',
+  'planIgnored',
 ]);
 
 function nightLine(n: number, events: readonly Event[]): string {

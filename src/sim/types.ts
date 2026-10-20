@@ -6,7 +6,14 @@
  * take and return these shapes.
  */
 
-export type MonsterId = 'count' | 'wolfman' | 'golem';
+/**
+ * Monster ids are slugs. The launch household uses 'count', 'wolfman' and
+ * 'golem'; a turned villager joins as 'turned-<townieId>'.
+ */
+export type MonsterId = string;
+
+/** The built-in archetypes. A monster's `archetype` picks its quirks and text. */
+export type Archetype = 'count' | 'wolfman' | 'golem' | 'fledgling';
 
 export const NEED_KEYS = [
   'hunger',
@@ -35,6 +42,7 @@ export const ACTION_KINDS = [
   'coverJob',
   'repair',
   'lieLow',
+  'gameNight',
 ] as const;
 
 export type ActionKind = (typeof ACTION_KINDS)[number];
@@ -50,7 +58,8 @@ export type QuirkId =
   | 'dayWalker'
   | 'villagersFlee'
   | 'lightningPowered'
-  | 'heavyHanded';
+  | 'heavyHanded'
+  | 'fledgling';
 
 export interface CoverJob {
   /** Human-readable job title, e.g. "night watchman". */
@@ -63,7 +72,10 @@ export interface CoverJob {
 
 export interface Monster {
   id: MonsterId;
+  archetype: Archetype;
   name: string;
+  /** Where this monster sleeps; the room is lit when they act there at night. */
+  bedroom: RoomId;
   needs: Needs;
   /** Amount subtracted from each need at dawn (anger is handled separately). */
   decay: Partial<Needs>;
@@ -95,11 +107,17 @@ export interface Event {
   data?: EventData;
 }
 
-export type RoomId = 'crypt' | 'kitchen' | 'parlour' | 'workshop' | 'roof';
+export type RoomId = 'crypt' | 'kitchen' | 'parlour' | 'workshop' | 'attic' | 'roof';
 
 export interface Room {
   id: RoomId;
   name: string;
+  /** Windows facing the village; each one adds to exposure. */
+  windows: number;
+  /** Lit at night by someone acting in the room. Reset at dusk. */
+  lit: boolean;
+  /** A way out that Van Helsing and the mob do not know about. */
+  secretPassage: boolean;
 }
 
 export interface Furniture {
@@ -117,14 +135,37 @@ export interface House {
   householdAnger: number;
 }
 
+export type RelationshipStage = 'stranger' | 'friend' | 'confidant' | 'thrall' | 'turned';
+
+export interface Townie {
+  id: string;
+  name: string;
+  job: string;
+  /** How much the village listens to this person (1–3). */
+  weight: number;
+  /** When they are out and about, and so who a monster can bump into. */
+  abroad: 'day' | 'night';
+  /** 0–100, their private suspicion of the manor. Spreads to neighbours. */
+  awareness: number;
+  /** Set once they have crossed 50 and said so out loud. */
+  outspoken: boolean;
+  relationship: RelationshipStage;
+  /** 0–100 progress toward the next stage. */
+  bond: number;
+  /** Ids of the two townies they share a fence with. */
+  neighbours: string[];
+}
+
 export type VillageMood = 'calm' | 'gossip' | 'snooping' | 'mob' | 'mobAtDoor';
 
 export interface Village {
   /** 0–100. 40 gossip, 70 Van Helsing snooping, 90 mob gathers, 100 mob at the door. */
   suspicion: number;
-  /** 0–100, filled by the Count's charm; at 100 a villager becomes an ally. */
-  recruitProgress: number;
+  townies: Townie[];
+  /** Names of townies at confidant or beyond: they keep the manor's secrets. */
   allies: string[];
+  /** Townies who were turned and now live in the manor. */
+  turned: string[];
 }
 
 export interface RngState {
@@ -157,6 +198,8 @@ export interface GameState {
   pendingSuspicion: number;
   /** Count of things this night that gave the village something to talk about. */
   noise: number;
+  /** Monsters who have stormed out. */
+  departed: string[];
   log: Event[];
   status: GameStatus;
 }
