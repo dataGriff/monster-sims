@@ -9,8 +9,10 @@ There is no renderer yet. The simulation is pure, deterministic TypeScript that
 emits a plain event log; the bundled CLI prints that log as prose.
 
 ```text
-Night 3 — The Count worked a quiet shift as night watchman (Suspicion -8). The Wolf Man ate (hunger +50). The Golem bought a plant and no one came. Suspicion 40 -> 38.
+Night 3 — The Count worked a quiet shift as night watchman (Suspicion -8). The Wolf Man ate (hunger +50). The Golem spent the evening at the inn (social +10). Suspicion 40 -> 38.
   · The Golem sat on the piano and it did not survive (house comfort -10).
+  · The Wolf Man is fuming about fun (anger +10).
+  · The village calms down a little.
 ```
 
 ## Quick start
