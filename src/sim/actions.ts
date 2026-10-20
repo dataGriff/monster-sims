@@ -1,4 +1,5 @@
 import { addSuspicion, adjustNeed, emit, type Ctx } from './context.ts';
+import { JOB_PAY } from './build.ts';
 import { brokenFurniture, lightRoom } from './house.ts';
 import { getQuirk, onStageReached, type ActionOutcome } from './quirks.ts';
 import { chance, pick } from './rng.ts';
@@ -79,13 +80,16 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
       return { text: `${name} ate (hunger +${hunger}).`, data: { hunger } };
     }
     case 'sleep': {
-      const energy = adjustNeed(ctx, monster, 'energy', SLEEP_ENERGY, 'sleep');
+      const bed = ctx.state.house.furniture.find((f) => f.id === monster.bed);
+      const bedBroken = !bed || bed.broken;
+      const energy = adjustNeed(ctx, monster, 'energy', bedBroken ? SLEEP_ENERGY / 2 : SLEEP_ENERGY, 'sleep');
       adjustNeed(ctx, monster, 'bladder', SLEEP_BLADDER, 'sleep');
+      const where = bedBroken ? ' on the floor, the bed being in pieces,' : '';
       const text =
         energy > 0
-          ? `${name} slept (energy +${energy}).`
-          : `${name} lay still all night but did not recharge.`;
-      return { text, data: { energy } };
+          ? `${name} slept${where} (energy +${energy}).`
+          : `${name} lay still all night but did not recharge${ctx.state.house.lightningRod ? '' : '; the lightning rod is down'}.`;
+      return { text, data: { energy, bedBroken } };
     }
     case 'socialise': {
       const social = adjustNeed(ctx, monster, 'social', SOCIAL_GAIN, 'socialise');
@@ -119,9 +123,10 @@ function perform(ctx: Ctx, monster: Monster, action: Action): ActionOutcome {
         };
       }
       addSuspicion(ctx, -monster.coverJob.relief);
+      ctx.state.house.coin += JOB_PAY;
       return {
-        text: `${name} worked a quiet shift as ${monster.coverJob.title} (Suspicion -${monster.coverJob.relief}).`,
-        data: { success: true, suspicion: -monster.coverJob.relief },
+        text: `${name} worked a quiet shift as ${monster.coverJob.title} (Suspicion -${monster.coverJob.relief}, +${JOB_PAY} coin).`,
+        data: { success: true, suspicion: -monster.coverJob.relief, coin: JOB_PAY },
       };
     }
     case 'repair': {

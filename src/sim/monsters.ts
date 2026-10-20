@@ -7,6 +7,7 @@ export function createCount(): Monster {
     archetype: 'count',
     name: 'The Count',
     bedroom: 'crypt',
+    bed: 'coffin',
     needs: makeNeeds({ hygiene: 100 }),
     // No energy decay at dawn: daylight is what drains him. Hygiene never moves.
     decay: { hunger: 15, energy: 0, social: 10, fun: 8, hygiene: 0, comfort: 5, bladder: 10 },
@@ -24,6 +25,7 @@ export function createWolfMan(): Monster {
     archetype: 'wolfman',
     name: 'The Wolf Man',
     bedroom: 'attic',
+    bed: 'cot',
     needs: makeNeeds(),
     decay: { hunger: 15, energy: 10, social: 10, fun: 8, hygiene: 10, comfort: 5, bladder: 15 },
     quirks: ['fullMoon', 'dayWalker'],
@@ -40,6 +42,7 @@ export function createGolem(): Monster {
     archetype: 'golem',
     name: 'The Golem',
     bedroom: 'workshop',
+    bed: 'slab',
     needs: makeNeeds({ social: 20, bladder: 100 }),
     // Clay is patient: slow hunger, slow energy, no bladder.
     decay: { hunger: 5, energy: 5, social: 5, fun: 8, hygiene: 5, comfort: 5, bladder: 0 },
@@ -59,6 +62,7 @@ export function createFledgling(townie: Townie): Monster {
     archetype: 'fledgling',
     name: `The ${job} (turned)`,
     bedroom: 'crypt',
+    bed: 'coffin',
     needs: makeNeeds({ hunger: 40, hygiene: 100, anger: 0 }),
     decay: { hunger: 20, energy: 0, social: 10, fun: 8, hygiene: 0, comfort: 5, bladder: 10 },
     quirks: ['nocturnalFeeder', 'daylightDrain', 'noReflection', 'fledgling'],

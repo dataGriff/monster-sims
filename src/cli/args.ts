@@ -1,6 +1,9 @@
 export interface CliArgs {
   seed: number;
   plan?: string;
+  save?: string;
+  load?: string;
+  until?: number;
   nights: number;
   json: boolean;
   verbose: boolean;
@@ -23,6 +26,16 @@ export function parseArgs(argv: readonly string[]): CliArgs {
         break;
       case '--plan':
         args.plan = next();
+        break;
+      case '--save':
+        args.save = next();
+        break;
+      case '--load':
+        args.load = next();
+        break;
+      case '--until':
+        args.until = Number(next());
+        if (!Number.isInteger(args.until) || args.until < 1) throw new Error('--until must be a positive integer');
         break;
       case '--nights':
         args.nights = Number(next());
@@ -48,11 +61,14 @@ export function parseArgs(argv: readonly string[]): CliArgs {
 
 export const USAGE = `Monster Manor (headless)
 
-Usage: pnpm play [--seed N] [--plan plan.json] [--nights N] [--verbose] [--json]
+Usage: pnpm play [--seed N] [--plan plan.json] [--nights N] [--until N] [--save f] [--load f] [--verbose] [--json]
 
   --seed N       RNG seed (default 42). Same seed + plan = same log.
   --plan FILE    JSON dusk schedule; see plans/example.json.
   --nights N     Nights to survive (default 7).
+  --until N      Stop after night N without finishing the run (pair with --save).
+  --save FILE    Write a save (seed, options, plan history) when the run stops.
+  --load FILE    Resume from a save, then keep playing with the plan.
   --verbose, -v  One plain-English line per event, grouped by night and phase.
   --json         Print the raw Event[] log instead of prose.
 `;

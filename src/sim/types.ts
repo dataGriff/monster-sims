@@ -76,6 +76,8 @@ export interface Monster {
   name: string;
   /** Where this monster sleeps; the room is lit when they act there at night. */
   bedroom: RoomId;
+  /** The furniture they sleep in. A broken bed halves what sleep restores. */
+  bed: string;
   needs: Needs;
   /** Amount subtracted from each need at dawn (anger is handled separately). */
   decay: Partial<Needs>;
@@ -127,12 +129,17 @@ export interface Furniture {
   broken: boolean;
 }
 
+export type DefenceId = 'drawbridge' | 'fogMachine' | 'decoyCoffins' | 'organ';
+
 export interface House {
   rooms: Room[];
   furniture: Furniture[];
   lightningRod: boolean;
   /** 0–100, the mean anger of everyone living in the house. */
   householdAnger: number;
+  /** Spending money, earned from cover jobs. */
+  coin: number;
+  defences: Record<DefenceId, boolean>;
 }
 
 export type RelationshipStage = 'stranger' | 'friend' | 'confidant' | 'thrall' | 'turned';
@@ -154,6 +161,8 @@ export interface Townie {
   bond: number;
   /** Ids of the two townies they share a fence with. */
   neighbours: string[];
+  /** Villagers live here; the hunter lodges at the inn while Suspicion is high. */
+  role: 'villager' | 'hunter';
 }
 
 export type VillageMood = 'calm' | 'gossip' | 'snooping' | 'mob' | 'mobAtDoor';
@@ -166,6 +175,8 @@ export interface Village {
   allies: string[];
   /** Townies who were turned and now live in the manor. */
   turned: string[];
+  /** Van Helsing is in the village. */
+  hunterPresent: boolean;
 }
 
 export interface RngState {
@@ -179,6 +190,14 @@ export type GameStatus = 'running' | 'won' | 'lost';
 export interface NightPlan {
   night: Partial<Record<MonsterId, ActionKind>>;
   day?: Partial<Record<MonsterId, ActionKind>>;
+  /** Things to buy at dusk, in order, while the coin lasts. */
+  build?: string[];
+}
+
+export interface GameOptions {
+  seed: number;
+  nightsToSurvive?: number;
+  suspicion?: number;
 }
 
 export interface Plan {
@@ -200,6 +219,12 @@ export interface GameState {
   noise: number;
   /** Monsters who have stormed out. */
   departed: string[];
+  /** Monsters the mob took. */
+  taken: string[];
+  /** What createGame was called with, so a save can rebuild the run. */
+  options: GameOptions;
+  /** Every dusk plan applied so far, in order. */
+  planHistory: NightPlan[];
   log: Event[];
   status: GameStatus;
 }

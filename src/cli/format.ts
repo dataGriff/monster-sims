@@ -26,6 +26,16 @@ const DETAIL_KINDS = new Set([
   'outspoken',
   'thralls',
   'planIgnored',
+  'built',
+  'buildFailed',
+  'mobRepelled',
+  'organ',
+  'mobAtDoor',
+  'hunterArrives',
+  'hunterLeaves',
+  'distracted',
+  'snooping',
+  'snoopingFoiled',
 ]);
 
 function nightLine(n: number, events: readonly Event[]): string {

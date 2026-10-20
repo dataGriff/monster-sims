@@ -12,4 +12,7 @@ export * as quirkRules from './quirks.ts';
 export * as actionRules from './actions.ts';
 export { DEFAULT_PLAN, parsePlan, planForNight } from './plan.ts';
 export { createGame, dusk, night, dawn, day, runNight, runGame, play } from './loop.ts';
-export type { GameOptions } from './loop.ts';
+export { CATALOGUE, buy, catalogueItem, JOB_PAY } from './build.ts';
+export * as mob from './mob.ts';
+export { saveGame, loadGame, parseSave } from './save.ts';
+export type { SaveFile } from './save.ts';

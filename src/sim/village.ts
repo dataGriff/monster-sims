@@ -18,11 +18,13 @@ export const SNOOPING_SUSPICION = 3;
 export const ANGRY_HOUSE_SUSPICION = 5;
 export const ANGRY_HOUSE_LEVEL = 70;
 export const MOB_ATTACK_CHANCE = 0.5;
+/** Van Helsing packs up once Suspicion falls below this. */
+export const HUNTER_LEAVES_BELOW = 50;
 
 export const STARTING_SUSPICION = BASELINE_SUSPICION;
 
 export function createVillage(suspicion = STARTING_SUSPICION): Village {
-  return { suspicion, townies: createTownies(), allies: [], turned: [] };
+  return { suspicion, townies: createTownies(), allies: [], turned: [], hunterPresent: false };
 }
 
 export function moodFor(suspicion: number): VillageMood {
@@ -36,7 +38,7 @@ export function moodFor(suspicion: number): VillageMood {
 export const MOOD_TEXT: Record<VillageMood, string> = {
   calm: 'The village sleeps soundly.',
   gossip: 'Gossip about the manor spreads through the market.',
-  snooping: 'Van Helsing has taken a room at the inn and is asking questions.',
+  snooping: 'The village is frightened enough to send for a man who knows about these things.',
   mob: 'A mob is gathering in the square with torches.',
   mobAtDoor: 'The mob is at the door.',
 };

@@ -46,7 +46,31 @@ export function createTownies(): Townie[] {
     relationship: 'stranger',
     bond: 0,
     neighbours: [ROSTER[(i + n - 1) % n]!.id, ROSTER[(i + 1) % n]!.id],
+    role: 'villager',
   }));
+}
+
+export const HUNTER_ID = 'vanhelsing';
+
+/** Van Helsing, as a townie: he lodges at the inn, so the innkeeper and the constable hear everything he says. */
+export function createHunter(): Townie {
+  return {
+    id: HUNTER_ID,
+    name: 'Van Helsing',
+    job: 'monster hunter',
+    weight: 3,
+    abroad: 'night',
+    awareness: 50,
+    outspoken: true,
+    relationship: 'stranger',
+    bond: 0,
+    neighbours: ['innkeeper', 'constable'],
+    role: 'hunter',
+  };
+}
+
+export function hunter(village: Village): Townie | undefined {
+  return village.townies.find((t) => t.role === 'hunter');
 }
 
 export function getTownie(village: Village, id: string): Townie {

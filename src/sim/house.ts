@@ -9,6 +9,7 @@ export const ROOMS: readonly Omit<Room, 'lit'>[] = [
   { id: 'roof', name: 'the roof', windows: 0, secretPassage: false },
 ];
 
+export const STARTING_COIN = 20;
 export const WINDOW_EXPOSURE = 10;
 export const LIGHT_EXPOSURE = 15;
 export const BROKEN_EXPOSURE = 5;
@@ -28,6 +29,8 @@ export function createHouse(): House {
     ],
     lightningRod: true,
     householdAnger: 10,
+    coin: STARTING_COIN,
+    defences: { drawbridge: false, fogMachine: false, decoyCoffins: false, organ: false },
   };
 }
 

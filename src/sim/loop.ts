@@ -1,26 +1,31 @@
 import { resolveAction } from './actions.ts';
 import { maybeFight, maybeRogueNight, moveOuts, recomputeHouseholdAnger } from './anger.ts';
+import { applyBuild } from './build.ts';
 import { addSuspicion, adjustNeed, emit, type Ctx } from './context.ts';
-import { breakRoom, createHouse, dousedLights, litWindowedRooms, roomName } from './house.ts';
+import { createHouse, dousedLights, litWindowedRooms, mostExposedRoom } from './house.ts';
+import { mobAtTheDoor, mobByDay } from './mob.ts';
 import { createMonsters } from './monsters.ts';
 import { SATISFACTION_KEYS, clamp } from './needs.ts';
 import { DEFAULT_PLAN, planForNight } from './plan.ts';
 import { getQuirk, ignoredNeeds } from './quirks.ts';
-import { chance, createRng, pick } from './rng.ts';
+import { createRng } from './rng.ts';
 import {
   AWARENESS_FORGET,
   GOSSIP_SPREAD,
+  HUNTER_ID,
   OUTSPOKEN_AT,
   OUTSPOKEN_SUSPICION,
+  createHunter,
+  hunter,
   isAlly,
 } from './townies.ts';
-import type { GameState, Monster, NightPlan, Plan, RoomId } from './types.ts';
+import type { GameOptions, GameState, Monster, NightPlan, Plan } from './types.ts';
 import {
   ANGRY_HOUSE_LEVEL,
   ANGRY_HOUSE_SUSPICION,
   BASELINE_SUSPICION,
+  HUNTER_LEAVES_BELOW,
   MOOD_TEXT,
-  MOB_ATTACK_CHANCE,
   NIGHTLY_RUMOUR,
   QUIET_NIGHT_DRIFT,
   SNOOPING_SUSPICION,
@@ -35,19 +40,16 @@ export const DAY_SLEEP_BLADDER = 40;
 export const LOW_NEED = 20;
 export const ANGER_RISE = 10;
 export const ANGER_FALL = 5;
-export const MOB_COMFORT = 15;
-export const MOB_ANGER = 10;
 export const LIGHT_SUSPICION = 1;
 export const THRALL_SUSPICION = -1;
 
-export interface GameOptions {
-  seed: number;
-  nightsToSurvive?: number;
-  suspicion?: number;
-}
+export type { GameOptions };
 
 export function createGame(options: GameOptions): GameState {
   return {
+    options: { ...options },
+    planHistory: [],
+    taken: [],
     night: 0,
     nightsToSurvive: options.nightsToSurvive ?? 7,
     rng: createRng(options.seed),
@@ -86,6 +88,8 @@ export function dusk(state: GameState, plan: NightPlan): void {
     if (!ids.has(id)) emit(ctx, 'planIgnored', `Nobody called "${id}" lives here; that assignment was ignored.`, { data: { monster: id } });
   }
 
+  state.planHistory.push(structuredClone(plan));
+  applyBuild(ctx, plan.build);
   for (const m of state.monsters) for (const q of quirkHooks(m)) q.onDusk?.(ctx, m);
   maybeRogueNight(ctx);
 }
@@ -194,6 +198,55 @@ function laidLowTonight(state: GameState): boolean {
   );
 }
 
+function metTonight(state: GameState, townieId: string): boolean {
+  return state.log.some(
+    (e) => e.night === state.night && e.kind === 'action' && e.data?.['townie'] === townieId,
+  );
+}
+
+/** Van Helsing (MM-18): arrives at 70, snoops the most exposed room each dawn, leaves below 50. */
+function hunterAtDawn(ctx: Ctx, highEnough: boolean): void {
+  const { state } = ctx;
+  const village = state.village;
+  let vh = hunter(village);
+  if (!vh && highEnough) {
+    vh = createHunter();
+    village.townies.push(vh);
+    village.hunterPresent = true;
+    emit(ctx, 'hunterArrives', 'Van Helsing has taken a room at the inn and is asking questions.', { data: { townie: HUNTER_ID } });
+  }
+  if (!vh) return;
+  if (vh.relationship === 'turned') return;
+  if (!highEnough && village.suspicion < HUNTER_LEAVES_BELOW && !isAlly(vh)) {
+    village.townies = village.townies.filter((t) => t.id !== vh.id);
+    village.hunterPresent = false;
+    emit(ctx, 'hunterLeaves', 'Van Helsing settled his bill at the inn and left on the morning coach.', { data: { townie: HUNTER_ID } });
+    return;
+  }
+  if (isAlly(vh)) return;
+  if (metTonight(state, vh.id)) {
+    emit(ctx, 'distracted', 'Van Helsing spent the night being talked at and snooped nowhere.', { data: { townie: HUNTER_ID } });
+    return;
+  }
+  const room = mostExposedRoom(state.house);
+  if (laidLowTonight(state)) {
+    emit(ctx, 'snoopingFoiled', `Van Helsing prowled around ${room.name} but found the curtains drawn and the doors barred.`, {
+      data: { room: room.id, suspicion: 0 },
+    });
+    return;
+  }
+  if (room.secretPassage && !room.lit) {
+    emit(ctx, 'snoopingFoiled', `Van Helsing prowled around ${room.name} and found nothing but a draught.`, {
+      data: { room: room.id, suspicion: 0 },
+    });
+    return;
+  }
+  addSuspicion(ctx, SNOOPING_SUSPICION);
+  emit(ctx, 'snooping', `Van Helsing snooped around ${room.name} and nobody was lying low (Suspicion +${SNOOPING_SUSPICION}).`, {
+    data: { room: room.id, suspicion: SNOOPING_SUSPICION },
+  });
+}
+
 /** Dawn: decay needs, update anger, settle the night's Suspicion, check for game over. */
 export function dawn(state: GameState): void {
   const ctx: Ctx = { state, phase: 'dawn' };
@@ -213,12 +266,7 @@ export function dawn(state: GameState): void {
   const before = village.suspicion;
   const moodBefore = moodFor(before);
   villageTalks(ctx);
-  if (moodRank(moodBefore) >= moodRank('snooping') && !laidLowTonight(state)) {
-    addSuspicion(ctx, SNOOPING_SUSPICION);
-    emit(ctx, 'snooping', `Van Helsing snooped around the grounds and nobody was lying low (Suspicion +${SNOOPING_SUSPICION}).`, {
-      data: { suspicion: SNOOPING_SUSPICION },
-    });
-  }
+  hunterAtDawn(ctx, moodRank(moodBefore) >= moodRank('snooping'));
   if (state.house.householdAnger >= ANGRY_HOUSE_LEVEL) {
     addSuspicion(ctx, ANGRY_HOUSE_SUSPICION);
     emit(ctx, 'angryHouse', `Shouting from the manor carried across the valley (Suspicion +${ANGRY_HOUSE_SUSPICION}).`, {
@@ -260,6 +308,10 @@ export function dawn(state: GameState): void {
   }
 
   if (after >= THRESHOLDS.mobAtDoor) {
+    if (mobAtTheDoor(ctx)) {
+      recomputeHouseholdAnger(state);
+      return;
+    }
     state.status = 'lost';
     emit(ctx, 'gameOver', 'The mob is at the door. Monster Manor has fallen.', { data: { outcome: 'lost' } });
     emitSummary(ctx);
@@ -322,18 +374,7 @@ export function day(state: GameState): void {
     daySleep(ctx, m);
   }
 
-  if (state.village.suspicion >= THRESHOLDS.mob && chance(state.rng, MOB_ATTACK_CHANCE)) {
-    const room = pick(state.rng, state.house.rooms).id as RoomId;
-    const broken = breakRoom(state.house, room);
-    for (const m of state.monsters) {
-      adjustNeed(ctx, m, 'comfort', -MOB_COMFORT, 'mob');
-      adjustNeed(ctx, m, 'anger', MOB_ANGER, 'mob');
-    }
-    const damage = broken.length > 0 ? ` They smashed the ${broken.join(', the ')}.` : '';
-    emit(ctx, 'mobAttack', `The mob stormed ${roomName(state.house, room)} while the house slept.${damage}`, {
-      data: { room, broken: broken.length },
-    });
-  }
+  mobByDay(ctx);
 
   if (state.night >= state.nightsToSurvive) {
     state.status = 'won';
