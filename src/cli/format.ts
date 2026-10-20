@@ -13,6 +13,10 @@ const DETAIL_KINDS = new Set([
   'anger',
   'gameOver',
   'victory',
+  'summary',
+  'quietNight',
+  'rumour',
+  'needCritical',
 ]);
 
 function nightLine(n: number, events: readonly Event[]): string {
@@ -31,6 +35,26 @@ export function formatNight(n: number, events: readonly Event[]): string {
     }
   }
   return lines.join('\n');
+}
+
+/** One line per event, grouped by night and phase (MM-11). */
+export function formatVerbose(state: GameState, seed: number): string {
+  const out: string[] = [`Monster Manor — seed ${seed}, ${state.nightsToSurvive} nights to survive.`];
+  let night = -1;
+  let phase = '';
+  for (const e of state.log) {
+    if (e.night !== night) {
+      night = e.night;
+      phase = '';
+      out.push('', `== Night ${night} ==`);
+    }
+    if (e.phase !== phase) {
+      phase = e.phase;
+      out.push(`-- ${phase} --`);
+    }
+    out.push(e.text);
+  }
+  return out.join('\n');
 }
 
 export function formatGame(state: GameState, seed: number): string {

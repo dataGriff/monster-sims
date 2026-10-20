@@ -12,14 +12,26 @@ Feature: Village Suspicion
     And Suspicion 90 means the mob gathers
     And Suspicion 100 means the mob is at the door
 
-  Scenario: Rumour drifts upward every night
+  Scenario: A quiet night decays Suspicion toward the baseline of 30
+    Given Suspicion is 50
     When everyone idles for a full night
-    Then the night ends with Suspicion 34
+    Then the night ends with Suspicion 47
+    And the log says "A quiet night"
+
+  Scenario: Below the baseline a quiet night creeps back up
+    Given Suspicion is 20
+    When everyone idles for a full night
+    Then the night ends with Suspicion 23
+
+  Scenario: A noisy night adds rumour on top of the noise
+    When the Wolf Man socialises for a full night
+    Then the night ends with Suspicion 36
+    And the log says "something to talk about"
 
   Scenario: Crossing 40 starts the gossip
     Given Suspicion is 38
-    When everyone idles for a full night
-    Then the night ends with Suspicion 42
+    When the Wolf Man socialises for a full night
+    Then the night ends with Suspicion 44
     And the log says "Gossip about the manor spreads"
 
   Scenario: Gossip makes cover jobs riskier and allies make them safer
@@ -30,7 +42,7 @@ Feature: Village Suspicion
   Scenario: A successful cover job lowers Suspicion
     Given a seed on which the next cover-job roll succeeds
     When the Golem works his cover job for the night
-    Then the night ends with Suspicion 26
+    Then the night ends with Suspicion 22
 
   Scenario: A failed cover job raises Suspicion
     Given a seed on which the next cover-job roll fails
@@ -46,7 +58,7 @@ Feature: Village Suspicion
   Scenario: Lying low keeps Van Helsing away
     Given Suspicion is 70
     When the Count lies low for a full night
-    Then the night ends with Suspicion 71
+    Then the night ends with Suspicion 64
     And the log does not say "Van Helsing snooped"
 
   Scenario: At 90 the mob gathers and may attack a room by day
@@ -74,6 +86,7 @@ Feature: Village Suspicion
     When everyone idles for a full night
     Then the game is lost
     And the log says "The mob is at the door"
+    And the log ends with a run summary saying "the household fell"
     And nothing happens in the day phase
     And running another night does nothing
 
@@ -81,6 +94,7 @@ Feature: Village Suspicion
     When a 7-night game is played with the default plan
     Then the game is won after night 7
     And the log says "The household survived"
+    And the log ends with a run summary saying "Run over"
 
   Scenario: The same seed and plan replay the same log
     When seed 42 is played twice with the default plan

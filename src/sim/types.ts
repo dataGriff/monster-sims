@@ -155,6 +155,8 @@ export interface GameState {
   village: Village;
   /** Suspicion change accumulated during the current night, applied at dawn. */
   pendingSuspicion: number;
+  /** Count of things this night that gave the village something to talk about. */
+  noise: number;
   log: Event[];
   status: GameStatus;
 }

@@ -56,6 +56,7 @@ export function adjustNeed(
 /** Queue a suspicion change; it is applied (and reported) at dawn. */
 export function addSuspicion(ctx: Ctx, delta: number): void {
   ctx.state.pendingSuspicion += delta;
+  if (delta > 0) ctx.state.noise += 1;
 }
 
 export function isFullMoon(night: number): boolean {

@@ -24,7 +24,10 @@ pnpm install
 pnpm test                       # all Gherkin scenarios, via Vitest
 pnpm play --seed 42             # 7 nights with the default plan
 pnpm play --seed 7 --plan plans/example.json
+pnpm play --seed 42 --verbose   # one plain-English line per event
 pnpm play --seed 42 --json      # raw Event[] instead of prose
+pnpm lint                       # oxlint, warnings denied
+pnpm check                      # lint + typecheck + test, what CI runs
 pnpm typecheck
 ```
 
@@ -62,8 +65,9 @@ game state.
 Eight needs per monster, each clamped to 0–100: `hunger`, `energy`, `social`,
 `fun`, `hygiene`, `comfort`, `bladder`, `anger`. For every need except anger,
 100 means satisfied. Anger is inverted: 0 is calm, 100 is furious. At dawn each
-monster's `decay` is subtracted, then anger rises by 10 if any need they care
-about is below 20 and falls by 5 otherwise. The house's `householdAnger` is the
+monster's `decay` is subtracted; a need crossing below 20 emits a
+`needCritical` event. Then anger rises by 10 if any need they care about is
+below 20 and falls by 5 otherwise. The house's `householdAnger` is the
 mean anger of the residents; at 70 or more the shouting adds Suspicion.
 
 ### Monsters
@@ -93,7 +97,11 @@ Suspicion thresholds:
 | 90        | The mob gathers. Each day there is a 50% chance it storms a random room. |
 | 100       | The mob is at the door. Game over. |
 
-Every dawn also adds a flat +4 of rumour, so doing nothing is not safe. When
+After a **noisy** night (anything raised Suspicion: a charm, a pale villager,
+a failed shift, a blackout, snooping) the dawn adds +4 of rumour on top. After
+a **quiet** night Suspicion drifts 3 points toward its baseline of 30, in
+either direction: the village forgets, but a house of strangers is never quite
+trusted. When
 the Count's recruit progress reaches 100 a villager becomes an ally, Suspicion
 drops by 10 and each ally makes cover jobs 5 points safer.
 
@@ -126,6 +134,9 @@ Queued at dusk, resolved at night in household order (Count, Wolf Man, Golem).
    day action, or the Count, who drains instead; a gathered mob may attack;
    surviving the final night wins.
 
+Both endings close the log with a single `summary` event carrying the outcome,
+nights survived, final Suspicion, household anger, broken furniture and allies.
+
 Every phase appends `Event` objects to `state.log`. An event is
 `{ night, phase, kind, monsterId?, text, data? }`; `text` is what the CLI
 prints, `data` carries the numbers so a future UI can render from the same log.
@@ -146,9 +157,11 @@ src/sim/        pure simulation
   plan.ts       default plan and plan-file parsing
   loop.ts       dusk / night / dawn / day, runNight, runGame, play
 src/cli/        text-mode runner (`pnpm play`)
-features/       Gherkin .feature files, one per monster plus suspicion and plans
+features/       Gherkin .feature files: needs, each monster, suspicion, plans, cli
 tests/          one Vitest spec per feature; steps.ts maps steps to sim calls
 plans/          example plan file
+docs/           the backlog and playtest notes
+.github/        CI: lint, typecheck, test, replayable smoke play
 ```
 
 ## How to add a monster

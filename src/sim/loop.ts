@@ -1,5 +1,5 @@
 import { resolveAction } from './actions.ts';
-import { adjustNeed, emit, type Ctx } from './context.ts';
+import { addSuspicion, adjustNeed, emit, type Ctx } from './context.ts';
 import { breakRoom, createHouse, roomName } from './house.ts';
 import { createMonsters } from './monsters.ts';
 import { SATISFACTION_KEYS, clamp } from './needs.ts';
@@ -10,9 +10,11 @@ import type { GameState, Monster, NightPlan, Plan, RoomId } from './types.ts';
 import {
   ANGRY_HOUSE_LEVEL,
   ANGRY_HOUSE_SUSPICION,
+  BASELINE_SUSPICION,
   MOOD_TEXT,
   MOB_ATTACK_CHANCE,
   NIGHTLY_RUMOUR,
+  QUIET_NIGHT_DRIFT,
   SNOOPING_SUSPICION,
   THRESHOLDS,
   createVillage,
@@ -43,6 +45,7 @@ export function createGame(options: GameOptions): GameState {
     house: createHouse(),
     village: createVillage(options.suspicion),
     pendingSuspicion: 0,
+    noise: 0,
     log: [],
     status: 'running',
   };
@@ -56,6 +59,7 @@ function quirkHooks(monster: Monster) {
 export function dusk(state: GameState, plan: NightPlan): void {
   state.night += 1;
   state.pendingSuspicion = 0;
+  state.noise = 0;
   const ctx: Ctx = { state, phase: 'dusk' };
 
   const parts: string[] = [];
@@ -83,9 +87,18 @@ export function night(state: GameState): void {
 }
 
 function applyDecay(ctx: Ctx, monster: Monster): void {
+  const ignored = ignoredNeeds(monster);
   for (const key of SATISFACTION_KEYS) {
     const amount = monster.decay[key];
-    if (amount) adjustNeed(ctx, monster, key, -amount, 'decay');
+    if (!amount) continue;
+    const before = monster.needs[key];
+    adjustNeed(ctx, monster, key, -amount, 'decay');
+    if (!ignored.has(key) && before >= LOW_NEED && monster.needs[key] < LOW_NEED) {
+      emit(ctx, 'needCritical', `${monster.name}'s ${key} has become critical (${monster.needs[key]}).`, {
+        monsterId: monster.id,
+        data: { need: key, value: monster.needs[key] },
+      });
+    }
   }
 }
 
@@ -126,19 +139,35 @@ export function dawn(state: GameState): void {
   const village = state.village;
   const before = village.suspicion;
   const moodBefore = moodFor(before);
-
-  state.pendingSuspicion += NIGHTLY_RUMOUR;
   if (moodRank(moodBefore) >= moodRank('snooping') && !laidLowTonight(state)) {
-    state.pendingSuspicion += SNOOPING_SUSPICION;
+    addSuspicion(ctx, SNOOPING_SUSPICION);
     emit(ctx, 'snooping', `Van Helsing snooped around the grounds and nobody was lying low (Suspicion +${SNOOPING_SUSPICION}).`, {
       data: { suspicion: SNOOPING_SUSPICION },
     });
   }
   if (state.house.householdAnger >= ANGRY_HOUSE_LEVEL) {
-    state.pendingSuspicion += ANGRY_HOUSE_SUSPICION;
+    addSuspicion(ctx, ANGRY_HOUSE_SUSPICION);
     emit(ctx, 'angryHouse', `Shouting from the manor carried across the valley (Suspicion +${ANGRY_HOUSE_SUSPICION}).`, {
       data: { suspicion: ANGRY_HOUSE_SUSPICION, householdAnger: state.house.householdAnger },
     });
+  }
+
+  if (state.noise > 0) {
+    state.pendingSuspicion += NIGHTLY_RUMOUR;
+    emit(ctx, 'rumour', `The village had something to talk about (Suspicion +${NIGHTLY_RUMOUR}).`, {
+      data: { suspicion: NIGHTLY_RUMOUR, noise: state.noise },
+    });
+  } else {
+    const gap = BASELINE_SUSPICION - before;
+    const drift = Math.sign(gap) * Math.min(QUIET_NIGHT_DRIFT, Math.abs(gap));
+    if (drift !== 0) {
+      state.pendingSuspicion += drift;
+      const text =
+        drift < 0
+          ? `A quiet night. The village forgets a little (Suspicion ${drift}).`
+          : `A quiet night, but a house of strangers is never quite trusted (Suspicion +${drift}).`;
+      emit(ctx, 'quietNight', text, { data: { suspicion: drift } });
+    }
   }
 
   const after = clamp(before + state.pendingSuspicion);
@@ -156,7 +185,32 @@ export function dawn(state: GameState): void {
   if (after >= THRESHOLDS.mobAtDoor) {
     state.status = 'lost';
     emit(ctx, 'gameOver', 'The mob is at the door. Monster Manor has fallen.', { data: { outcome: 'lost' } });
+    emitSummary(ctx);
   }
+}
+
+/** One closing event with the numbers a results screen needs. */
+function emitSummary(ctx: Ctx): void {
+  const { state } = ctx;
+  const broken = state.house.furniture.filter((f) => f.broken).length;
+  const allies = state.village.allies;
+  const outcome = state.status === 'won' ? 'survived' : 'fell';
+  const allyText = allies.length > 0 ? ` Allies: ${allies.join(', ')}.` : ' No allies.';
+  emit(
+    ctx,
+    'summary',
+    `Run over: the household ${outcome} after ${state.night} night${state.night === 1 ? '' : 's'}. Final Suspicion ${state.village.suspicion}, household anger ${state.house.householdAnger}, ${broken} broken furnishing${broken === 1 ? '' : 's'}.${allyText}`,
+    {
+      data: {
+        outcome: state.status,
+        nights: state.night,
+        suspicion: state.village.suspicion,
+        householdAnger: state.house.householdAnger,
+        brokenFurniture: broken,
+        allies: allies.length,
+      },
+    },
+  );
 }
 
 function daySleep(ctx: Ctx, monster: Monster): void {
@@ -209,6 +263,7 @@ export function day(state: GameState): void {
     emit(ctx, 'victory', `Night ${state.night} has passed. The household survived. The village, for now, believes nothing.`, {
       data: { outcome: 'won' },
     });
+    emitSummary(ctx);
   }
 }
 

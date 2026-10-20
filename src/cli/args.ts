@@ -3,11 +3,12 @@ export interface CliArgs {
   plan?: string;
   nights: number;
   json: boolean;
+  verbose: boolean;
   help: boolean;
 }
 
 export function parseArgs(argv: readonly string[]): CliArgs {
-  const args: CliArgs = { seed: 42, nights: 7, json: false, help: false };
+  const args: CliArgs = { seed: 42, nights: 7, json: false, verbose: false, help: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = () => {
@@ -30,6 +31,10 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       case '--json':
         args.json = true;
         break;
+      case '--verbose':
+      case '-v':
+        args.verbose = true;
+        break;
       case '-h':
       case '--help':
         args.help = true;
@@ -43,10 +48,11 @@ export function parseArgs(argv: readonly string[]): CliArgs {
 
 export const USAGE = `Monster Manor (headless)
 
-Usage: pnpm play [--seed N] [--plan plan.json] [--nights N] [--json]
+Usage: pnpm play [--seed N] [--plan plan.json] [--nights N] [--verbose] [--json]
 
   --seed N       RNG seed (default 42). Same seed + plan = same log.
   --plan FILE    JSON dusk schedule; see plans/example.json.
   --nights N     Nights to survive (default 7).
+  --verbose, -v  One plain-English line per event, grouped by night and phase.
   --json         Print the raw Event[] log instead of prose.
 `;

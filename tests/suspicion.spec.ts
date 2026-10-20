@@ -32,16 +32,30 @@ describe('Feature: Village Suspicion', () => {
     expect(moodFor(100)).toBe('mobAtDoor');
   });
 
-  it('Scenario: Rumour drifts upward every night', () => {
-    const game = aNewGame({ seed: 42, suspicion: 30 });
+  it('Scenario: A quiet night decays Suspicion toward the baseline of 30', () => {
+    const game = aNewGame({ seed: 42, suspicion: 50 });
     fullNight(game, IDLE);
-    expect(suspicionAtEndOfNight(game)).toBe(34);
+    expect(suspicionAtEndOfNight(game)).toBe(47);
+    expectLogSays(game, 'A quiet night');
+  });
+
+  it('Scenario: Below the baseline a quiet night creeps back up', () => {
+    const game = aNewGame({ seed: 42, suspicion: 20 });
+    fullNight(game, IDLE);
+    expect(suspicionAtEndOfNight(game)).toBe(23);
+  });
+
+  it('Scenario: A noisy night adds rumour on top of the noise', () => {
+    const game = aNewGame({ seed: 42, suspicion: 30 });
+    fullNight(game, plan({ wolfman: 'socialise' }));
+    expect(suspicionAtEndOfNight(game)).toBe(36);
+    expectLogSays(game, 'something to talk about');
   });
 
   it('Scenario: Crossing 40 starts the gossip', () => {
     const game = aNewGame({ seed: 42, suspicion: 38 });
-    fullNight(game, IDLE);
-    expect(suspicionAtEndOfNight(game)).toBe(42);
+    fullNight(game, plan({ wolfman: 'socialise' }));
+    expect(suspicionAtEndOfNight(game)).toBe(44);
     expectLogSays(game, 'Gossip about the manor spreads');
   });
 
@@ -62,7 +76,7 @@ describe('Feature: Village Suspicion', () => {
     const p = coverJobFailChance({ state: game0, phase: 'night' }, findMonster(game0, 'golem'));
     const game = aNewGame({ seed: seedWhere(rollAtLeast(p)), suspicion: 30 });
     fullNight(game, plan({ golem: 'coverJob' }));
-    expect(suspicionAtEndOfNight(game)).toBe(26);
+    expect(suspicionAtEndOfNight(game)).toBe(22);
   });
 
   it('Scenario: A failed cover job raises Suspicion', () => {
@@ -83,7 +97,7 @@ describe('Feature: Village Suspicion', () => {
   it('Scenario: Lying low keeps Van Helsing away', () => {
     const game = aNewGame({ seed: 42, suspicion: 70 });
     fullNight(game, plan({ count: 'lieLow' }));
-    expect(suspicionAtEndOfNight(game)).toBe(71);
+    expect(suspicionAtEndOfNight(game)).toBe(64);
     expect(logSays(game, 'Van Helsing snooped')).toBe(false);
   });
 
@@ -119,6 +133,8 @@ describe('Feature: Village Suspicion', () => {
     fullNight(game, IDLE);
     expect(game.status).toBe('lost');
     expectLogSays(game, 'The mob is at the door');
+    expect(game.log.at(-1)?.kind).toBe('summary');
+    expect(game.log.at(-1)?.text).toContain('the household fell');
     expect(game.log.filter((e) => e.phase === 'day')).toHaveLength(0);
     const before = game.log.length;
     expect(runNight(game, IDLE)).toHaveLength(0);
@@ -131,6 +147,10 @@ describe('Feature: Village Suspicion', () => {
     expect(game.status).toBe('won');
     expect(game.night).toBe(7);
     expectLogSays(game, 'The household survived');
+    const last = game.log.at(-1);
+    expect(last?.kind).toBe('summary');
+    expect(last?.text).toContain('Run over');
+    expect(last?.data?.['outcome']).toBe('won');
   });
 
   it('Scenario: The same seed and plan replay the same log', () => {
