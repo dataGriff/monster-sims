@@ -2,11 +2,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   build: {
-    lib: {
-      entry: 'src/sim/index.ts',
-      formats: ['es'],
-      fileName: 'monster-manor',
-    },
+    outDir: 'dist',
+    target: 'es2022',
   },
   test: {
     include: ['tests/**/*.spec.ts'],

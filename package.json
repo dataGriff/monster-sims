@@ -17,7 +17,9 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "build": "vite build",
     "telemetry": "node src/cli/telemetry.ts",
-    "i18n": "node src/cli/i18n-report.ts"
+    "i18n": "node src/cli/i18n-report.ts",
+    "dev": "vite",
+    "preview": "vite preview"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

@@ -530,12 +530,17 @@ export function storyById(id: string): Story | undefined {
   return STORIES.find((s) => s.id === id);
 }
 
+/** The story that would fire at this dusk, if any, without firing it. */
+export function pendingStory(state: GameState): Story | undefined {
+  if (!state.options.stories) return undefined;
+  const coolingDown = state.night - state.stories.lastNight < STORY_COOLDOWN;
+  return STORIES.find((s) => !state.stories.fired.includes(s.id) && (s.urgent || !coolingDown) && s.when(state));
+}
+
 /** Dusk: fire at most one story, honouring the cooldown unless it is urgent. */
 export function maybeStory(ctx: Ctx, plan: NightPlan): Story | undefined {
   const { state } = ctx;
-  if (!state.options.stories) return undefined;
-  const coolingDown = state.night - state.stories.lastNight < STORY_COOLDOWN;
-  const story = STORIES.find((s) => !state.stories.fired.includes(s.id) && (s.urgent || !coolingDown) && s.when(state));
+  const story = pendingStory(state);
   if (!story) return undefined;
   const wanted = plan.choices?.[story.id];
   const choice = story.choices.find((c) => c.id === wanted) ?? story.choices[0]!;
