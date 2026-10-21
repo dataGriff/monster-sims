@@ -3,8 +3,9 @@ Feature: Web client view-model
   The pieces that decide what to draw are pure and tested here.
 
   Scenario: The manor has a place for every room
-    Then every room id has a cell in the isometric layout
-    And isometric cells map to distinct screen points
+    Then every room id has a box on the stage
+    And rooms on the same level never overlap
+    And the cellar, ground floor, upper floor and roof stack in that order
 
   Scenario: Sprites follow the night's events
     Given seed 42 after one night with the Count feeding, the Wolf Man sleeping and the Golem repairing

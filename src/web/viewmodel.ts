@@ -10,28 +10,11 @@ import { NEED_KEYS, type ActionKind, type Event, type GameState, type Monster, t
 import { moodFor, THRESHOLDS } from '../sim/village.ts';
 import { isHuntNight } from '../sim/archetypes/welsh.ts';
 
-/** Isometric grid cell per room: the manor is three rooms wide and two deep, with the roof above. */
-export const ROOM_LAYOUT: Record<RoomId, { col: number; row: number; w: number; h: number }> = {
-  roof: { col: 0, row: -1, w: 3, h: 1 },
-  attic: { col: 0, row: 0, w: 1, h: 1 },
-  parlour: { col: 1, row: 0, w: 1, h: 1 },
-  workshop: { col: 2, row: 0, w: 1, h: 1 },
-  crypt: { col: 0, row: 1, w: 1, h: 1 },
-  kitchen: { col: 1, row: 1, w: 1, h: 1 },
-  // the gate: not a room, used for residents who are out
-};
-
-export const TILE_W = 128;
-export const TILE_H = 64;
-
-/** Grid cell to screen point (top corner of the diamond). */
-export function isoToScreen(col: number, row: number, originX: number, originY: number): { x: number; y: number } {
-  return { x: originX + (col - row) * (TILE_W / 2), y: originY + (col + row) * (TILE_H / 2) };
-}
-
 /**
- * Okabe–Ito palette: distinguishable under the common colour-vision
- * deficiencies. One accent per archetype; the fledgling shares the Count's.
+ * One accent per archetype, the only colour a resident brings into the
+ * monochrome world (docs/art-direction.md). Drawn from the Okabe–Ito and Tol
+ * colour-vision-safe sets, adjusted so every accent clears 3:1 contrast
+ * against the stage's ink. The fledgling shares the Count's.
  */
 export const ACCENTS: Record<string, string> = {
   count: '#D55E00',
@@ -42,8 +25,8 @@ export const ACCENTS: Record<string, string> = {
   lakeling: '#0072B2',
   phantom: '#CC79A7',
   bride: '#999999',
-  hunchback: '#882255',
-  gwyllgi: '#332288',
+  hunchback: '#AA7744',
+  gwyllgi: '#9988DD',
   cwnannwn: '#44AA99',
   gwrach: '#DDCC77',
   fledgling: '#D55E00',
@@ -53,11 +36,15 @@ export function accentFor(m: Monster): string {
   return ACCENTS[m.archetype] ?? '#FFFFFF';
 }
 
-export type Pose = 'idle' | 'walk' | 'act' | 'asleep';
+export type { Pose } from './art/figures.ts';
+import type { Pose } from './art/figures.ts';
 
 export interface Sprite {
   id: string;
   name: string;
+  archetype: string;
+  /** Furniture id they sleep in, so sleepers lie on their own bed. */
+  bed: string;
   initial: string;
   accent: string;
   /** Room they are drawn in, or 'out' at the gate. */
@@ -79,7 +66,7 @@ function lastEventFor(events: readonly Event[], id: string): Event | undefined {
 export function spriteStates(state: GameState, phase: 'dusk' | 'night' | 'day'): Sprite[] {
   const nightEvents = state.log.filter((e) => e.night === state.night);
   return state.monsters.map((m) => {
-    const base = { id: m.id, name: m.name, initial: m.name.replace(/^(The|Y) /, '').charAt(0), accent: accentFor(m) };
+    const base = { id: m.id, name: m.name, archetype: m.archetype, bed: m.bed, initial: m.name.replace(/^(The|Y) /, '').charAt(0), accent: accentFor(m) };
     if (phase === 'day') {
       const e = lastEventFor(nightEvents.filter((x) => x.phase === 'day'), m.id);
       const acted = e?.kind === 'action';
@@ -99,7 +86,8 @@ export function spriteStates(state: GameState, phase: 'dusk' | 'night' | 'day'):
   });
 }
 
-export type MoonPhase = 'new' | 'waxing crescent' | 'first quarter' | 'waxing gibbous' | 'nearly full' | 'full' | 'waning';
+export type { MoonPhase } from './art/scenery.ts';
+import type { MoonPhase } from './art/scenery.ts';
 
 /** The moon by night number: full on every 7th. */
 export function moonPhase(night: number): MoonPhase {

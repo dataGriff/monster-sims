@@ -1,15 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { findMonster } from '../src/sim/context.ts';
 import { PLAYABLE } from '../src/sim/monsters.ts';
-import { ACCENTS, ROOM_LAYOUT, hudModel, isoToScreen, moonPhase, riskHints, spriteStates } from '../src/web/viewmodel.ts';
+import { ROOM_BOXES } from '../src/web/art/stage.ts';
+import { ACCENTS, hudModel, moonPhase, riskHints, spriteStates } from '../src/web/viewmodel.ts';
 import { aNewGame, dawn, duskAndNight, day, itIsTheDuskOfNight, plan } from './steps.ts';
 
 describe('Feature: Web client view-model', () => {
   it('Scenario: The manor has a place for every room', () => {
     const game = aNewGame({ seed: 42, suspicion: 30 });
-    for (const r of game.house.rooms) expect(ROOM_LAYOUT[r.id]).toBeDefined();
-    const points = Object.values(ROOM_LAYOUT).map((c) => isoToScreen(c.col, c.row, 0, 0));
-    expect(new Set(points.map((p) => `${p.x},${p.y}`)).size).toBe(points.length);
+    for (const r of game.house.rooms) expect(ROOM_BOXES[r.id]).toBeDefined();
+    const boxes = Object.values(ROOM_BOXES);
+    for (const a of boxes) {
+      for (const b of boxes) {
+        if (a === b || a.level !== b.level) continue;
+        expect(a.x1 <= b.x0 || b.x1 <= a.x0, 'rooms on one level do not overlap').toBe(true);
+      }
+    }
+    expect(ROOM_BOXES.crypt.z1).toBeLessThanOrEqual(ROOM_BOXES.kitchen.z0);
+    expect(ROOM_BOXES.kitchen.z1).toBeLessThanOrEqual(ROOM_BOXES.workshop.z0);
+    expect(ROOM_BOXES.workshop.z1).toBeLessThanOrEqual(ROOM_BOXES.roof.z0);
   });
 
   it("Scenario: Sprites follow the night's events", () => {
