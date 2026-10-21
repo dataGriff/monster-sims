@@ -37,7 +37,13 @@ what a future artist must not draw.
   `src/`, `features/`, `tests/`, `plans/`, `README.md` and `docs/` (except this
   file and the imported backlog, which quotes one of them as a working title).
 - Add a term here when a new archetype arrives. Add a row above too.
-- Before any art lands (MM-31), re-run the silhouette column against the
+- The procedural silhouettes in `src/web/art/figures.ts` (MM-31) were
+  drawn against the silhouette column above; the Count has no high collar
+  or widow's peak, the Wolf Man a canine muzzle, the Golem a round head, the
+  Lake Creature no crest, gill flares or scales, the Phantom a plain full
+  mask, the Bride a veil rather than tall streaked hair, and the hunter a
+  flat cap and lantern.
+- Before any painted art lands, re-run the silhouette column against the
   concept sheets with a second pair of eyes.
 
 ## Forbidden terms

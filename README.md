@@ -48,14 +48,28 @@ always produce the same log; CI diffs two runs of seed 42 to prove it.
 
 ### The browser client
 
+![Monster Manor key art](docs/art/key-art.jpg)
+
 `pnpm dev` serves `index.html`, which drives the same sim. URL parameters
 mirror the CLI: `seed`, `household`, `setting`, `difficulty`, `nights`, `lang`,
-`sandbox=1`, `stories=off`. The screen has the isometric manor (drawn purely
-from state and events), a HUD, the dusk planning form with live risk hints and
-tonight's story branches, a build list, a timed event ticker and a bestiary
-built from each resident's quirks. Keys: `R` runs the night, `space` skips the
-animation, `P` focuses the plan; all three are remappable from the header, and
-text size is adjustable. `pnpm build` writes a static site to `dist/`.
+`sandbox=1`, `stories=off`, plus `keyart=1` for the poster composition.
+
+The stage is a leaning cutaway of the manor (cellar, two floors and the roof)
+drawn procedurally from state and events: each resident has their own
+silhouette and pose, sleepers lie on their beds, lit windows glow, and the
+village, the hunter and the mob watch from the lane. Hover a resident for
+what they are doing. Around it sit the HUD, the dusk plan with live risk
+notes and tonight's story, the build catalogue, the night diary and a
+field-guide bestiary that fills in as you meet each monster.
+
+Keys: `R` runs the night, `space` skips the animation, `P` focuses the plan;
+all three are remappable under *Settings*, along with text size, film grain
+and vignette, and animation (off by default when the system asks for reduced
+motion). `pnpm build` writes a static site to `dist/`.
+
+The look is specified in [docs/art-direction.md](docs/art-direction.md).
+
+![The night stage](docs/art/stage-night.jpg)
 
 ### Plan files
 
@@ -230,11 +244,16 @@ src/sim/            pure simulation
   i18n.ts, strings/ the string tables
   loop.ts           dusk / night / dawn / day, runNight, runGame, play
 src/cli/            text-mode runner, telemetry, i18n report
-src/web/            browser client: viewmodel (pure, tested), render, ui, main
-features/           one Gherkin file per feature (29)
+src/web/            browser client
+  viewmodel.ts      pure state → view mapping (sprites, HUD, risk hints)
+  render.ts         the stage: composes the art into one frame, returns hit boxes
+  art/              palette, stage projection, figures, furniture, scenery,
+                    post effects and bestiary copy
+  ui.ts, styles.css the interface; main.ts wires it together
+features/           one Gherkin file per feature (30)
 tests/              one Vitest spec per feature; steps.ts maps steps to sim calls
 plans/              example plan file
-docs/               backlog, playtest notes, IP audit
+docs/               backlog, playtest notes, IP audit, art direction and reference images
 .github/            CI: lint, typecheck, test, replayable smoke play
 ```
 
@@ -252,8 +271,11 @@ docs/               backlog, playtest notes, IP audit
    `daylightActive`.
 3. Register it in `src/sim/monsters.ts` (`createArchetype`, `PLAYABLE`) and
    give it a bed in `createHouse()` if it needs one the house lacks.
-4. Give it an accent in `ACCENTS` (`src/web/viewmodel.ts`) and a row in
-   `docs/ip-audit.md`.
+4. Give it an accent in `ACCENTS` (`src/web/viewmodel.ts`) that clears 3:1
+   contrast on ink, a silhouette in `FIGURES` (`src/web/art/figures.ts`), a
+   bed in `FURNITURE` if it brings one, field-guide copy in
+   `src/web/art/bestiary.ts`, and a row in `docs/ip-audit.md`.
+   `tests/art.spec.ts` fails until all of these exist.
 5. Write `features/<name>.feature`, then `tests/<name>.spec.ts` using the
    helpers in `tests/steps.ts` (`seedWhere` pins any random roll). Use a small
    `household` in tests so other residents' rolls do not shift yours.
