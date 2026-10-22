@@ -13,6 +13,7 @@ import { BONE, onAccent } from './art/palette.ts';
 import { THEME_LABELS, type ThemeName } from './design/tokens.ts';
 import { fragment, h, type VNode } from './kit/h.ts';
 import { button, catalogueItem, chip, chips, eyebrow, gauge, lockedPlate, meter, moonIcon, panelTitle, plate, portrait, select, storyCard, tileGroup, toggle, type Tone } from './kit/components.ts';
+import { icon } from './kit/icons.ts';
 import { ACCENTS, hudModel, riskHints, type Hud } from './viewmodel.ts';
 
 export interface Draft {
@@ -155,10 +156,10 @@ export function hudView(state: GameState): VNode {
     }),
     h('div', { class: 'gauge anger' }, meter({ label: 'Household anger', value: hud.householdAnger, tone: angerTone, critical: hud.householdAnger >= 60, inverted: true })),
     chips([
-      chip(`${hud.coin} coin`),
-      chip(hud.lightningRod ? 'Rod standing' : 'Rod down', hud.lightningRod ? '' : 'bad'),
-      hud.hunterPresent ? chip('Hunter in town', 'warn') : null,
-      hud.allies.length > 0 ? chip(`${hud.allies.length} ${hud.allies.length === 1 ? 'ally' : 'allies'}`, 'good') : null,
+      chip(`${hud.coin} coin`, '', icon('coin')),
+      chip(hud.lightningRod ? 'Rod standing' : 'Rod down', hud.lightningRod ? '' : 'bad', icon(hud.lightningRod ? 'rod' : 'rodDown')),
+      hud.hunterPresent ? chip('Hunter in town', 'warn', icon('hunter')) : null,
+      hud.allies.length > 0 ? chip(`${hud.allies.length} ${hud.allies.length === 1 ? 'ally' : 'allies'}`, 'good', icon('allies')) : null,
     ].filter((x): x is VNode => x !== null)),
     hud.monsters.map((m) => {
       const archetype = state.monsters.find((x) => x.id === m.id)?.archetype ?? 'fledgling';
@@ -169,7 +170,7 @@ export function hudView(state: GameState): VNode {
         h(
           'div',
           { class: 'needs' },
-          m.needs.map((n) => meter({ label: n.key, value: n.value, tone: needTone(n.key, n.value), critical: n.critical, inverted: n.key === 'anger' })),
+          m.needs.map((n) => meter({ label: n.key, value: n.value, tone: needTone(n.key, n.value), critical: n.critical, inverted: n.key === 'anger', icon: icon(n.key, 12) })),
         ),
       );
     }),
@@ -200,7 +201,7 @@ export function planView(state: GameState, draft: Draft, cb: PlanCallbacks): VNo
             name: `act-${m.id}`,
             label: `${m.name} tonight`,
             value: current,
-            options: [{ value: null, label: 'Idle' }, ...ACTION_KINDS.map((k) => ({ value: k, label: ACTION_LABELS[k] }))],
+            options: [{ value: null, label: 'Idle', icon: icon('idle') }, ...ACTION_KINDS.map((k) => ({ value: k, label: ACTION_LABELS[k], icon: icon(k) }))],
             onChange: (k) => ((draft.night[m.id] = k), cb.onChange()),
           }),
           m.daylightActive

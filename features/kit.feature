@@ -32,3 +32,8 @@ Feature: Component kit
     When a tree is rendered into a fake document
     Then attributes, properties, styles, event listeners and canvas drawing are all applied
     And SVG elements are created in the SVG namespace
+
+  Scenario: Every need, action and chip has an icon
+    Then every need, every action, idle and every HUD chip has a line icon
+    And every icon's path data is well formed and stays on the 24-unit grid
+    And icons are hidden from assistive technology and always sit beside a text label

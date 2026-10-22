@@ -4,6 +4,8 @@ import { DEFAULT_PLAN, planForNight } from '../src/sim/plan.ts';
 import { PLAYABLE } from '../src/sim/monsters.ts';
 import type { Archetype } from '../src/sim/types.ts';
 import { accessibleName, findAll, fragment, h, hasClass, interactive, mount, render, textOf, type DocLike, type VNode } from '../src/web/kit/h.ts';
+import { ICONS, icon, type IconName } from '../src/web/kit/icons.ts';
+import { ACTION_KINDS, NEED_KEYS } from '../src/sim/types.ts';
 import { bestiaryView, diaryView, headerView, hudView, planView, type Draft, type Settings } from '../src/web/views.ts';
 
 function game() {
@@ -163,5 +165,25 @@ describe('Feature: Component kit', () => {
     const target = doc.createElement('section') as unknown as Element;
     mount(target, fragment(h('b'), h('i')));
     expect((target as unknown as Fake).children.map((c) => c.tag)).toEqual(['b', 'i']);
+  });
+
+  it('Scenario: Every need, action and chip has an icon', () => {
+    const required: IconName[] = [...NEED_KEYS, ...ACTION_KINDS, 'idle', 'coin', 'rod', 'rodDown', 'hunter', 'allies'];
+    for (const name of required) expect(ICONS[name], name).toBeDefined();
+    for (const [name, paths] of Object.entries(ICONS)) {
+      for (const d of paths) {
+        expect(d, name).toMatch(/^M[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]+$/);
+        const nums = [...d.matchAll(/-?\d*\.?\d+/g)].map((m) => Number(m[0]));
+        for (const n of nums) expect(Math.abs(n), `${name}: ${d}`).toBeLessThanOrEqual(24);
+      }
+    }
+    const svg = icon('feed');
+    expect(svg.props['aria-hidden']).toBe('true');
+    const g = game();
+    for (const view of [hudView(g), planView(g, draftFor(g), { onChange: noop, onRun: noop, onNewRun: noop })]) {
+      for (const holder of findAll(view, (n) => n.children.some((c) => c.tag === 'svg' && String(c.props['class']).startsWith('icon-line')))) {
+        expect(textOf(holder).trim().length, 'icon without a label').toBeGreaterThan(0);
+      }
+    }
   });
 });
