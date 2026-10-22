@@ -137,9 +137,24 @@ class App {
     const { header, hud, plan } = this.layout;
     const s = this.state;
     const where = s.options.setting === 'valley' ? 'the valley' : 'the manor';
-    renderHeader(header, `seed ${s.options.seed} · ${where} · ${s.options.difficulty ?? 'standard'}`, this.settings, () => {
-      this.applySettings();
-      this.renderAll();
+    renderHeader(header, `seed ${s.options.seed} · ${where} · ${s.options.difficulty ?? 'standard'}`, this.settings, {
+      onChange: () => {
+        this.applySettings();
+        this.renderAll();
+      },
+      onRemap: (name) => {
+        const handler = (ev: KeyboardEvent) => {
+          ev.preventDefault();
+          this.settings.keys[name] = ev.key.toLowerCase();
+          window.removeEventListener('keydown', handler, true);
+          this.applySettings();
+          this.renderAll();
+        };
+        window.addEventListener('keydown', handler, true);
+        const kbd = header.querySelectorAll('kbd');
+        const index = ['run', 'skip', 'focusPlan'].indexOf(name);
+        if (kbd[index]) kbd[index].textContent = 'press a key…';
+      },
     });
     renderHud(hud, s);
     renderPlan(plan, s, this.draft, {

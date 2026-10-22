@@ -268,7 +268,9 @@ button.primary:disabled { opacity: 0.4; cursor: default; background: var(--text)
 .controls { display: flex; align-items: center; gap: var(--space-10); margin-top: var(--space-8); flex-wrap: wrap; }
 .controls .spacer { flex: 1; }
 .seed { font-size: var(--text-sm); color: var(--text-muted); }
-.seed input { width: 6em; }
+.seed-input { width: 6em; }
+.guide-link { font-size: var(--text-sm); color: var(--text-muted); letter-spacing: 0.08em; }
+.guide-link:hover { color: var(--text); }
 
 .plan-build h2 { margin-bottom: var(--space-8); }
 .catalogue { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: var(--space-6); }
