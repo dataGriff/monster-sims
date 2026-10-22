@@ -19,7 +19,8 @@
     "telemetry": "node src/cli/telemetry.ts",
     "i18n": "node src/cli/i18n-report.ts",
     "dev": "vite",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tokens": "node src/web/design/build-tokens.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

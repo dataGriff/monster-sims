@@ -7,25 +7,27 @@
  * village sees.
  */
 
-export const INK = '#0e0e12';
-export const SOOT = '#17171d';
-export const CHARCOAL = '#222129';
-export const SLATE = '#34333d';
-export const ASH = '#5b5966';
-export const PEWTER = '#8c8896';
-export const BONE = '#d8d0bc';
-export const PAPER = '#ece5d3';
+import { PRIMITIVES } from '../design/tokens.ts';
+
+export const INK = PRIMITIVES.ink;
+export const SOOT = PRIMITIVES.soot;
+export const CHARCOAL = PRIMITIVES.charcoal;
+export const SLATE = PRIMITIVES.slate;
+export const ASH = PRIMITIVES.ash;
+export const PEWTER = PRIMITIVES.pewter;
+export const BONE = PRIMITIVES.bone;
+export const PAPER = PRIMITIVES.paper;
 
 /** Field-guide plates: sepia ink on paper. */
-export const SEPIA = '#2b2219';
-export const SEPIA_WASH = '#7d6a50';
-export const PLATE_PAPER = '#e9e0c8';
+export const SEPIA = PRIMITIVES.sepia;
+export const SEPIA_WASH = PRIMITIVES.sepiaWash;
+export const PLATE_PAPER = PRIMITIVES.platePaper;
 
 /** The one warm light. */
-export const LAMP = '#f2c46b';
+export const LAMP = PRIMITIVES.lamp;
 /** Interface alarms: Suspicion at the mob, critical needs. */
-export const ALARM = '#d0453b';
-export const WARN = '#e3a33a';
+export const ALARM = PRIMITIVES.alarm;
+export const WARN = PRIMITIVES.warn;
 
 export type Rgb = [number, number, number];
 
