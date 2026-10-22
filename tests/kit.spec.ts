@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { createGame, runNight } from '../src/sim/loop.ts';
 import { DEFAULT_PLAN, planForNight } from '../src/sim/plan.ts';
@@ -185,5 +187,16 @@ describe('Feature: Component kit', () => {
         expect(textOf(holder).trim().length, 'icon without a label').toBeGreaterThan(0);
       }
     }
+  });
+
+  it('Scenario: The style guide is built with the game', () => {
+    const root = join(import.meta.dirname, '..');
+    const config = readFileSync(join(root, 'vite.config.ts'), 'utf8');
+    expect(config).toContain("'index.html'");
+    expect(config).toContain("'styleguide.html'");
+    const header = headerView('meta', settings, { onChange: noop, onRemap: noop });
+    expect(findAll(header, (n) => n.tag === 'a' && n.props['href'] === './styleguide.html')).toHaveLength(1);
+    const guide = readFileSync(join(root, 'src/web/styleguide.ts'), 'utf8');
+    for (const id of ['colour', 'scales', 'components', 'icons', 'figures', 'furniture', 'stage']) expect(guide).toContain(`section('${id}'`);
   });
 });

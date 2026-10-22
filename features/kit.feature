@@ -37,3 +37,8 @@ Feature: Component kit
     Then every need, every action, idle and every HUD chip has a line icon
     And every icon's path data is well formed and stays on the 24-unit grid
     And icons are hidden from assistive technology and always sit beside a text label
+
+  Scenario: The style guide is built with the game
+    Then styleguide.html is a build entry alongside index.html
+    And the game's header links to it
+    And the style guide covers colour, scales, components, icons, residents, furniture and the stage

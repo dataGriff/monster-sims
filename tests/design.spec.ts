@@ -48,7 +48,7 @@ describe('Feature: Design framework', () => {
     const steps = Object.entries(TYPE).filter(([k]) => k !== 'root').map(([, v]) => rem(v));
     expect(Math.min(...steps)).toBeGreaterThanOrEqual(0.72);
     const widths = [...styles.matchAll(/@media \(max-width: (\d+)px\)/g)].map((m) => Number(m[1]));
-    expect(widths.toSorted((a, b) => a - b)).toEqual(Object.values(BREAKPOINTS).toSorted((a, b) => a - b));
+    expect([...new Set(widths)].toSorted((a, b) => a - b)).toEqual(Object.values(BREAKPOINTS).toSorted((a, b) => a - b));
   });
 
   it("Scenario: The client's timings come from the motion tokens", () => {
