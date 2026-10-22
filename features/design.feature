@@ -13,3 +13,18 @@ Feature: Design framework
   Scenario: The canvas and the interface share one palette
     Then the canvas palette's ink, bone, lamp, warn and alarm come from the token primitives
     And the night theme's text, background and lamp are those same primitives
+
+  Scenario: Sizes and timings come from the scales
+    Then every font-size in styles.css is a type-scale token
+    And every padding, margin and gap is built from spacing-scale tokens, 0 or auto
+    And every transition uses a motion-duration token
+    And the smallest type step is at least 0.72rem
+    And the media-query widths in styles.css are the breakpoint tokens
+
+  Scenario: The client's timings come from the motion tokens
+    Then main.ts contains no bare millisecond timings
+    And with animation off every motion duration becomes zero or instant
+
+  Scenario: Keyboard focus is always visible
+    Then styles.css has a global :focus-visible rule with an outline
+    And every custom input control that hides its native input shows focus on its label

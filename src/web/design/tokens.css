@@ -35,4 +35,39 @@
 
 :root {
   --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --text-root: 16px;
+  --text-2xs: 0.72rem;
+  --text-xs: 0.78rem;
+  --text-sm: 0.85rem;
+  --text-base: 0.95rem;
+  --text-md: 1rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.3rem;
+  --text-2xl: 1.65rem;
+  --text-display: 2.1rem;
+  --space-1: 1px;
+  --space-2: 2px;
+  --space-3: 3px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-18: 18px;
+  --space-22: 22px;
+  --space-24: 24px;
+  --space-40: 40px;
+  --gutter: 16px;
+  --dur-fast: 120ms;
+  --dur-medium: 400ms;
+  --dur-slow: 500ms;
+  --ease-standard: ease;
+}
+
+.reduce-motion {
+  --dur-fast: 0ms;
+  --dur-medium: 0ms;
+  --dur-slow: 0ms;
 }

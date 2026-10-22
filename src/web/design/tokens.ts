@@ -109,6 +109,84 @@ export const FONTS = {
   serif: "'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif",
 } as const;
 
+/**
+ * Type scale (MM-44). Nothing in the interface is set smaller than `2xs`
+ * (11.5 px at the default root size); the root size scales with the
+ * player's text-size setting.
+ */
+export const TYPE = {
+  root: '16px',
+  '2xs': '0.72rem',
+  xs: '0.78rem',
+  sm: '0.85rem',
+  base: '0.95rem',
+  md: '1rem',
+  lg: '1.15rem',
+  xl: '1.3rem',
+  '2xl': '1.65rem',
+  display: '2.1rem',
+} as const;
+
+/** Spacing scale, named by its size in pixels: `--space-10` is 10 px. */
+export const SPACE = {
+  1: '1px',
+  2: '2px',
+  3: '3px',
+  4: '4px',
+  6: '6px',
+  8: '8px',
+  10: '10px',
+  12: '12px',
+  14: '14px',
+  16: '16px',
+  18: '18px',
+  22: '22px',
+  24: '24px',
+  40: '40px',
+} as const;
+
+/** Page gutter: the side margin at every width. */
+export const GUTTER = SPACE[16];
+
+/** Layout breakpoints, in px. Media queries cannot read custom properties, so a test keeps them in step. */
+export const BREAKPOINTS = { stack: 1000, narrow: 520 } as const;
+
+/**
+ * Motion. CSS reads the durations as custom properties; the client reads
+ * the same numbers for its own timings. With animation off every duration
+ * becomes zero.
+ */
+export const MOTION = {
+  fast: 120,
+  medium: 400,
+  slow: 500,
+  /** Diary: one line every… */
+  revealStep: 420,
+  revealStepReduced: 160,
+  /** Pause before the first line, while the night's title card shows. */
+  revealDelay: 700,
+  /** Title cards, in animation frames. */
+  cardFade: 18,
+  titleHold: 150,
+  nightHold: 60,
+  newRunHold: 110,
+  /** Fraction of the remaining distance the light eases each frame. */
+  lightEase: 0.04,
+} as const;
+
+export const EASE = { standard: 'ease' } as const;
+
+export type MotionKey = keyof typeof MOTION;
+
+/** A timing in ms (or frames), zeroed when animation is off. */
+export function motion(key: MotionKey, animate: boolean): number {
+  if (animate) return MOTION[key];
+  if (key === 'revealStep') return MOTION.revealStepReduced;
+  if (key === 'lightEase') return 1;
+  if (key === 'cardFade') return 1;
+  return key === 'revealDelay' ? 0 : MOTION[key];
+}
+
 /** camelCase role → --kebab-case custom property. */
 export function cssName(role: string): string {
   return `--${role.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`;
@@ -137,6 +215,13 @@ export function buildTokensCss(): string {
     const selector = name === 'night' ? `:root,\n[data-theme='night']` : `[data-theme='${name}']`;
     parts.push(block(selector, themeVars(colours)));
   }
-  parts.push(block(':root', { '--font-serif': FONTS.serif }));
+  const scales: Record<string, string> = { '--font-serif': FONTS.serif };
+  for (const [k, v] of Object.entries(TYPE)) scales[`--text-${k}`] = v;
+  for (const [k, v] of Object.entries(SPACE)) scales[`--space-${k}`] = v;
+  scales['--gutter'] = GUTTER;
+  for (const k of ['fast', 'medium', 'slow'] as const) scales[`--dur-${k}`] = `${MOTION[k]}ms`;
+  scales['--ease-standard'] = EASE.standard;
+  parts.push(block(':root', scales));
+  parts.push(block('.reduce-motion', { '--dur-fast': '0ms', '--dur-medium': '0ms', '--dur-slow': '0ms' }));
   return parts.join('\n');
 }

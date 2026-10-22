@@ -5,6 +5,7 @@ import { createGame, runNight } from '../sim/loop.ts';
 import { PLAYABLE, VALLEY_HOUSEHOLD } from '../sim/monsters.ts';
 import type { Archetype, Difficulty, Event, GameState, Setting } from '../sim/types.ts';
 import { paintNoise, type Card } from './art/post.ts';
+import { MOTION, motion } from './design/tokens.ts';
 import { STAGE_H, STAGE_W, drawScene, hitTest, type HitBox, type Scene } from './render.ts';
 import {
   buildLayout,
@@ -85,7 +86,7 @@ class App {
     this.noise = this.makeNoise();
     this.applySettings();
     this.renderAll();
-    this.showCard({ title: 'Monster Manor', subtitle: 'a household of monsters · a village that watches' }, this.keyart ? Infinity : 150);
+    this.showCard({ title: 'Monster Manor', subtitle: 'a household of monsters · a village that watches' }, this.keyart ? Infinity : MOTION.titleHold);
     if (this.keyart) document.body.classList.add('keyart');
     window.addEventListener('keydown', (ev) => this.onKey(ev));
     this.layout.canvas.addEventListener('pointermove', (ev) => this.onHover(ev));
@@ -155,7 +156,7 @@ class App {
   cardAlpha(): Card | undefined {
     if (!this.card) return undefined;
     const age = this.frame - this.card.start;
-    const fade = this.settings.motion ? 18 : 1;
+    const fade = motion('cardFade', this.settings.motion);
     if (age > this.card.hold + fade) {
       this.card = null;
       return undefined;
@@ -176,14 +177,14 @@ class App {
     this.shown = [];
     this.reveal = 0;
     this.renderAll();
-    this.showCard({ title: 'Monster Manor', subtitle: `a new household · seed ${seed}` }, 110);
+    this.showCard({ title: 'Monster Manor', subtitle: `a new household · seed ${seed}` }, MOTION.newRunHold);
   }
 
   runNight(): void {
     if (this.state.status !== 'running' || this.timer !== null) return;
     const n = this.state.night + 1;
     const moon = moonPhase(n);
-    this.showCard({ title: `Night ${n}`, subtitle: moon === 'full' ? 'the moon is full' : `the moon is ${moon}` }, 60);
+    this.showCard({ title: `Night ${n}`, subtitle: moon === 'full' ? 'the moon is full' : `the moon is ${moon}` }, MOTION.nightHold);
     const events = runNight(this.state, draftToPlan(this.draft));
     this.shown = [...events];
     this.reveal = 0;
@@ -201,9 +202,9 @@ class App {
         this.finishNight();
         return;
       }
-      this.timer = window.setTimeout(step, this.settings.motion ? 420 : 160);
+      this.timer = window.setTimeout(step, motion('revealStep', this.settings.motion));
     };
-    this.timer = window.setTimeout(step, this.settings.motion ? 700 : 0);
+    this.timer = window.setTimeout(step, motion('revealDelay', this.settings.motion));
   }
 
   skip(): void {
@@ -268,7 +269,7 @@ class App {
   scene(): Scene {
     const s = this.state;
     const target = daylight(this.phase);
-    this.light += (target - this.light) * (this.settings.motion ? 0.04 : 1);
+    this.light += (target - this.light) * motion('lightEase', this.settings.motion);
     if (this.keyart) return this.keyartScene();
     const card = this.cardAlpha();
     return {
