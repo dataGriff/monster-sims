@@ -245,7 +245,7 @@ button.primary:disabled { opacity: 0.4; cursor: default; background: var(--text)
   white-space: nowrap;
 }
 .tile input:hover + label { border-color: var(--text); }
-.tile input:checked + label { background: var(--accent, var(--text)); color: var(--text-inverse); border-color: var(--accent, var(--text)); font-weight: 700; }
+.tile input:checked + label { background: var(--accent, var(--text)); color: var(--on-accent, var(--text-inverse)); border-color: var(--accent, var(--text)); font-weight: 700; }
 .tile input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: 2px; }
 .dayslot { align-self: center; }
 .dayslot select { font-size: var(--text-sm); }

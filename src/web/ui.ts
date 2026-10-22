@@ -11,7 +11,8 @@ import { THRESHOLDS } from '../sim/village.ts';
 import { PLATES, romanNumeral } from './art/bestiary.ts';
 import { drawFigure, figureHeight, type FigureStyle } from './art/figures.ts';
 import { drawItemIcon } from './art/furniture.ts';
-import { BONE, INK, PLATE_PAPER, withAlpha } from './art/palette.ts';
+import { BONE, INK, PLATE_PAPER, onAccent, withAlpha } from './art/palette.ts';
+import { THEME_LABELS, type ThemeName } from './design/tokens.ts';
 import { moonPath } from './art/scenery.ts';
 import { ACCENTS, hudModel, riskHints, type Hud } from './viewmodel.ts';
 
@@ -169,12 +170,14 @@ export interface Settings {
   grain: boolean;
   /** Animation; defaults off when the OS asks for reduced motion. */
   motion: boolean;
+  /** Interface theme; defaults to high contrast when the OS asks for more contrast. */
+  theme: ThemeName;
 }
 
 const DEFAULT_KEYS: Keys = { run: 'r', skip: ' ', focusPlan: 'p' };
 
-export function loadSettings(prefersReducedMotion = false): Settings {
-  const base: Settings = { scale: 1, keys: { ...DEFAULT_KEYS }, grain: true, motion: !prefersReducedMotion };
+export function loadSettings(prefersReducedMotion = false, defaultThemeName: ThemeName = 'night'): Settings {
+  const base: Settings = { scale: 1, keys: { ...DEFAULT_KEYS }, grain: true, motion: !prefersReducedMotion, theme: defaultThemeName };
   try {
     const raw = localStorage.getItem('monster-manor.settings');
     if (raw) {
@@ -184,6 +187,7 @@ export function loadSettings(prefersReducedMotion = false): Settings {
         keys: { ...DEFAULT_KEYS, ...parsed.keys },
         grain: parsed.grain ?? base.grain,
         motion: parsed.motion ?? base.motion,
+        theme: parsed.theme && parsed.theme in THEME_LABELS ? parsed.theme : base.theme,
       };
     }
   } catch {
@@ -218,6 +222,14 @@ export function renderHeader(target: HTMLElement, meta: string, settings: Settin
     onChange();
   });
   panel.append(el('div', { class: 'setting' }, el('span', { text: 'Text size' }), smaller, larger));
+  const theme = el('select', { id: 'setting-theme' });
+  for (const [value, label] of Object.entries(THEME_LABELS)) theme.append(el('option', { value, text: label }));
+  theme.value = settings.theme;
+  theme.addEventListener('change', () => {
+    settings.theme = theme.value as ThemeName;
+    onChange();
+  });
+  panel.append(el('div', { class: 'setting' }, el('label', { for: 'setting-theme', text: 'Theme' }), theme));
   for (const [key, label] of [['grain', 'Film grain and vignette'], ['motion', 'Animation']] as const) {
     const id = `setting-${key}`;
     const input = el('input', { type: 'checkbox', id });
@@ -346,6 +358,7 @@ export function renderPlan(target: HTMLElement, state: GameState, draft: Draft, 
       const accent = ACCENTS[m.archetype] ?? BONE;
       const row = el('fieldset', { class: 'assign' });
       row.style.setProperty('--accent', accent);
+      row.style.setProperty('--on-accent', onAccent(accent));
       const legend = el('legend', {}, portrait(m.archetype, accent, 40, 'stage', ''), el('span', { text: m.name }));
       row.append(legend);
       const tiles = el('div', { class: 'tiles', role: 'radiogroup', 'aria-label': `${m.name} tonight` });

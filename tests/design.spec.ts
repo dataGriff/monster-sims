@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ALARM, BONE, INK, LAMP, WARN } from '../src/web/art/palette.ts';
-import { BREAKPOINTS, MOTION, PRIMITIVES, THEMES, TYPE, buildTokensCss, motion, type MotionKey } from '../src/web/design/tokens.ts';
+import { ALARM, BONE, INK, LAMP, WARN, contrast, onAccent } from '../src/web/art/palette.ts';
+import { PLAYABLE } from '../src/sim/monsters.ts';
+import { ACCENTS } from '../src/web/viewmodel.ts';
+import { BREAKPOINTS, MOTION, PRIMITIVES, THEMES, TYPE, buildTokensCss, defaultTheme, motion, type MotionKey, type ThemeName } from '../src/web/design/tokens.ts';
 import { RAW_COLOUR, ROOT, declarations, definedVars, readCss, usedVars } from './css.ts';
 
 const styles = readCss('src/web/styles.css');
@@ -21,7 +23,8 @@ describe('Feature: Design framework', () => {
       .map((d) => `${d.selector} { ${d.prop}: ${d.value} }`);
     expect(offenders).toEqual([]);
     const defined = new Set([...definedVars(tokensCss), ...definedVars(styles)]);
-    const undefinedVars = [...usedVars(styles)].filter((v) => !defined.has(v) && v !== '--accent');
+    // --accent and --on-accent are set inline per resident
+    const undefinedVars = [...usedVars(styles)].filter((v) => !defined.has(v) && v !== '--accent' && v !== '--on-accent');
     expect(undefinedVars).toEqual([]);
   });
 
@@ -69,5 +72,40 @@ describe('Feature: Design framework', () => {
       const base = h.selector.replace(/ input$/, ' input:focus-visible');
       expect(styles.includes(base), `${h.selector} needs a :focus-visible style`).toBe(true);
     }
+  });
+
+  it('Scenario: Every theme meets WCAG AA', () => {
+    const failures: string[] = [];
+    const check = (theme: string, fg: string, fgName: string, bg: string, bgName: string, min: number) => {
+      const ratio = contrast(fg, bg);
+      if (ratio < min) failures.push(`${theme}: ${fgName} on ${bgName} is ${ratio.toFixed(2)} (needs ${min})`);
+    };
+    for (const [name, t] of Object.entries(THEMES)) {
+      const surfaces = { bg: t.bg, surface: t.surface, surfaceEnd: t.surfaceEnd, raised: t.raised, sunken: t.sunken };
+      const texts = { text: t.text, textMuted: t.textMuted, textStrong: t.textStrong, warnText: t.warnText, alarmText: t.alarmText, lamp: t.lamp };
+      for (const [fn, fg] of Object.entries(texts)) for (const [bn, bg] of Object.entries(surfaces)) check(name, fg, fn, bg, bn, 4.5);
+      check(name, t.textInverse, 'textInverse', t.text, 'text (button fill)', 4.5);
+      check(name, t.plateInk, 'plateInk', t.plate, 'plate', 4.5);
+      check(name, t.plateInkMuted, 'plateInkMuted', t.plate, 'plate', 4.5);
+      check(name, t.plate, 'plate (legend text)', t.plateInk, 'plateInk', 4.5);
+      for (const [bn, bg] of Object.entries(surfaces)) check(name, t.focus, 'focus', bg, bn, 3);
+      for (const fill of ['calm', 'warn', 'alarm'] as const) check(name, t[fill], fill, t.sunken, 'sunken', 3);
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it("Scenario: Text on a resident's accent is always legible", () => {
+    for (const a of PLAYABLE) {
+      const accent = ACCENTS[a]!;
+      expect(contrast(onAccent(accent), accent), a).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('Scenario: Themes are complete and selectable', () => {
+    const roles = Object.keys(THEMES.night).toSorted();
+    for (const [name, t] of Object.entries(THEMES)) expect(Object.keys(t).toSorted(), name).toEqual(roles);
+    for (const name of Object.keys(THEMES) as ThemeName[]) expect(tokensCss).toContain(`[data-theme='${name}']`);
+    expect(defaultTheme(true)).toBe('contrast');
+    expect(defaultTheme(false)).toBe('night');
   });
 });

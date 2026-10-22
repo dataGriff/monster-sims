@@ -27,7 +27,13 @@ export const PRIMITIVES = {
   alarm: '#d0453b',
 } as const;
 
-export type ThemeName = 'night';
+export type ThemeName = 'night' | 'paper' | 'contrast';
+
+export const THEME_LABELS: Record<ThemeName, string> = {
+  night: 'Night',
+  paper: 'Paper',
+  contrast: 'High contrast',
+};
 
 /** Colour roles. Every one exists in every theme. */
 export interface ThemeColours {
@@ -103,7 +109,76 @@ export const THEMES: Record<ThemeName, ThemeColours> = {
     shadow: 'rgba(0, 0, 0, 0.55)',
     colorScheme: 'dark',
   },
+  /** A light, field-guide interface for daytime reading. The stage stays a night world. */
+  paper: {
+    bg: '#e6dfcc',
+    bgGlow: '#f3eee0',
+    surface: '#f4efe2',
+    surfaceEnd: '#ece5d4',
+    raised: '#fbf8f0',
+    sunken: '#ddd5c1',
+    text: '#1f1b17',
+    textMuted: '#5b5448',
+    textStrong: '#0e0e12',
+    textInverse: '#f4efe2',
+    rule: 'rgba(43, 34, 25, 0.18)',
+    ruleStrong: 'rgba(43, 34, 25, 0.42)',
+    lamp: '#734a00',
+    focus: '#734a00',
+    calm: '#5f5a4d',
+    warn: '#a86a10',
+    warnText: '#7f4d00',
+    alarm: '#b8352a',
+    alarmText: '#9a2a20',
+    plate: '#fbf6e8',
+    plateInk: PRIMITIVES.sepia,
+    plateInkMuted: '#5f4f39',
+    plateRule: '#c4b593',
+    plateEdge: '#9a8966',
+    plateHighlight: 'rgba(255, 255, 255, 0.5)',
+    plateStain: 'rgba(120, 90, 50, 0.1)',
+    locked: '#d6cdb8',
+    shadow: 'rgba(43, 34, 25, 0.3)',
+    colorScheme: 'light',
+  },
+  /** Maximum legibility: pure black and white, strong rules, no translucency. */
+  contrast: {
+    bg: '#000000',
+    bgGlow: '#000000',
+    surface: '#000000',
+    surfaceEnd: '#000000',
+    raised: '#0d0d0d',
+    sunken: '#000000',
+    text: '#ffffff',
+    textMuted: '#dcdcdc',
+    textStrong: '#ffffff',
+    textInverse: '#000000',
+    rule: '#9a9a9a',
+    ruleStrong: '#ffffff',
+    lamp: '#ffd25e',
+    focus: '#ffd25e',
+    calm: '#ffffff',
+    warn: '#ffb000',
+    warnText: '#ffc94d',
+    alarm: '#ff5a4f',
+    alarmText: '#ff8a80',
+    plate: '#ffffff',
+    plateInk: '#000000',
+    plateInkMuted: '#2e2e2e',
+    plateRule: '#000000',
+    plateEdge: '#000000',
+    plateHighlight: 'rgba(255, 255, 255, 0)',
+    plateStain: 'rgba(0, 0, 0, 0)',
+    locked: '#111111',
+    shadow: '#000000',
+    colorScheme: 'dark',
+  },
 };
+
+/** Which theme to start in: high contrast when the system asks for more contrast. */
+export function defaultTheme(prefersMoreContrast: boolean): ThemeName {
+  return prefersMoreContrast ? 'contrast' : 'night';
+}
 
 export const FONTS = {
   serif: "'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif",

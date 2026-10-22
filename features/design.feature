@@ -28,3 +28,17 @@ Feature: Design framework
   Scenario: Keyboard focus is always visible
     Then styles.css has a global :focus-visible rule with an outline
     And every custom input control that hides its native input shows focus on its label
+
+  Scenario: Every theme meets WCAG AA
+    Then in the night, paper and high-contrast themes, body, muted, strong, warning, alarm and lamp text reach 4.5:1 on every surface
+    And the primary button's text reaches 4.5:1 on its fill
+    And plate ink and muted plate ink reach 4.5:1 on the plate
+    And focus rings and meter fills reach 3:1 against what they sit on
+
+  Scenario: Text on a resident's accent is always legible
+    Then for every resident accent the chosen label colour reaches 4.5:1
+
+  Scenario: Themes are complete and selectable
+    Then every theme defines every colour role
+    And the generated stylesheet has a block for each theme
+    And the default theme is high contrast when the system asks for more contrast, otherwise night

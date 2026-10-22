@@ -5,7 +5,7 @@ import { createGame, runNight } from '../sim/loop.ts';
 import { PLAYABLE, VALLEY_HOUSEHOLD } from '../sim/monsters.ts';
 import type { Archetype, Difficulty, Event, GameState, Setting } from '../sim/types.ts';
 import { paintNoise, type Card } from './art/post.ts';
-import { MOTION, motion } from './design/tokens.ts';
+import { MOTION, defaultTheme, motion } from './design/tokens.ts';
 import { STAGE_H, STAGE_W, drawScene, hitTest, type HitBox, type Scene } from './render.ts';
 import {
   buildLayout,
@@ -79,7 +79,8 @@ class App {
   constructor(root: HTMLElement) {
     this.keyart = new URLSearchParams(location.search).get('keyart') === '1';
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    this.settings = loadSettings(reduced);
+    const moreContrast = window.matchMedia?.('(prefers-contrast: more)').matches ?? false;
+    this.settings = loadSettings(reduced, defaultTheme(moreContrast));
     this.layout = buildLayout(root);
     this.state = createGame(optionsFromUrl());
     this.draft = emptyDraft(this.state);
@@ -124,6 +125,7 @@ class App {
   applySettings(): void {
     document.documentElement.style.fontSize = `${16 * this.settings.scale}px`;
     document.documentElement.classList.toggle('reduce-motion', !this.settings.motion);
+    document.documentElement.dataset['theme'] = this.settings.theme;
     saveSettings(this.settings);
   }
 

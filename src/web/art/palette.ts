@@ -90,3 +90,11 @@ export function ramp(stops: ReadonlyArray<readonly [number, string]>, light: num
   }
   return stops[stops.length - 1]![1];
 }
+
+/**
+ * Text colour for a label sitting on an accent fill: ink or white, whichever
+ * contrasts more. Every resident accent clears 4.5:1 one way or the other.
+ */
+export function onAccent(accent: string): string {
+  return contrast(accent, INK) >= contrast(accent, '#ffffff') ? INK : '#ffffff';
+}
