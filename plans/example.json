@@ -1,0 +1,11 @@
+{
+  "nights": [
+    { "night": { "count": "feed", "wolfman": "coverJob", "golem": "sleep" } },
+    { "night": { "count": "socialise", "wolfman": "sleep", "golem": "repair" }, "day": { "wolfman": "coverJob" } },
+    { "night": { "count": "coverJob", "wolfman": "feed", "golem": "socialise" } },
+    { "night": { "count": "feed", "wolfman": "lieLow", "golem": "coverJob" } },
+    { "night": { "count": "socialise", "wolfman": "coverJob", "golem": "sleep" } },
+    { "night": { "count": "lieLow", "wolfman": "repair", "golem": "feed" }, "day": { "wolfman": "coverJob" } },
+    { "night": { "count": "lieLow", "wolfman": "sleep", "golem": "lieLow" } }
+  ]
+}

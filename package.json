@@ -1,0 +1,34 @@
+{
+  "name": "monster-manor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Monster Manor: a headless life-sim where the household is classic public-domain monsters and the village's suspicion is the antagonist.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "play": "node src/cli/main.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "oxlint --deny-warnings src tests scripts vite.config.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "build": "vite build",
+    "telemetry": "node src/cli/telemetry.ts",
+    "i18n": "node src/cli/i18n-report.ts",
+    "dev": "vite",
+    "preview": "vite preview",
+    "tokens": "node src/web/design/build-tokens.ts",
+    "shots": "node scripts/shots.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "oxlint": "^1.89.0",
+    "playwright-core": "1.56.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}
