@@ -26,8 +26,10 @@ Two rules carry the whole look:
 
 ## Palette
 
-Defined in `src/web/art/palette.ts` and mirrored as CSS custom properties in
-`src/web/styles.css`.
+Defined once in `src/web/design/tokens.ts`: the primitives below feed both
+the canvas (`src/web/art/palette.ts`) and the interface, through colour roles
+per theme. See [design-system.md](design-system.md) for the roles, the
+Paper and High-contrast themes, and how to change a colour.
 
 | Token | Hex | Role |
 | --- | --- | --- |
@@ -163,9 +165,10 @@ manor and stay unlocked between runs. Locked plates show a dark silhouette.
 
 ## Producing reference images
 
-`?keyart=1` renders the poster composition at 1920 × 1080. The images in
-`docs/art/` were captured from the built client in headless Chromium; re-run
-the capture after visual changes so this page stays true.
+`?keyart=1` renders the poster composition at 1920 × 1080. `pnpm shots`
+rebuilds the client and recaptures everything in `docs/art/`; run it after
+visual changes so this page stays true. Visual changes are also caught by
+fingerprint tests (see [design-system.md](design-system.md)).
 
 ## When painted art arrives
 

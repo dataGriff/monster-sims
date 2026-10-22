@@ -67,7 +67,16 @@ all three are remappable under *Settings*, along with text size, film grain
 and vignette, and animation (off by default when the system asks for reduced
 motion). `pnpm build` writes a static site to `dist/`.
 
-The look is specified in [docs/art-direction.md](docs/art-direction.md).
+The look is specified in [docs/art-direction.md](docs/art-direction.md), and
+the design system that carries it out (tokens, themes, the component kit,
+icons, the style guide at `/styleguide.html`, design lint and visual
+regression tests) in [docs/design-system.md](docs/design-system.md).
+
+```sh
+pnpm tokens    # regenerate src/web/design/tokens.css from tokens.ts
+pnpm shots     # rebuild and recapture the reference images in docs/art/
+pnpm test -u   # accept a deliberate visual change (review the snapshot diff)
+```
 
 ![The night stage](docs/art/stage-night.jpg)
 
@@ -249,8 +258,13 @@ src/web/            browser client
   render.ts         the stage: composes the art into one frame, returns hit boxes
   art/              palette, stage projection, figures, furniture, scenery,
                     post effects and bestiary copy
-  ui.ts, styles.css the interface; main.ts wires it together
-features/           one Gherkin file per feature (30)
+  design/           tokens.ts (colours, themes, scales, motion) → tokens.css
+  kit/              h() view layer, components, icons
+  views.ts          header, HUD, plan, diary, bestiary as pure views
+  styleguide.ts     the living style guide (styleguide.html)
+  ui.ts, styles.css the shell and the styles; main.ts wires it together
+scripts/            shots.ts: capture the reference images
+features/           one Gherkin file per feature (33)
 tests/              one Vitest spec per feature; steps.ts maps steps to sim calls
 plans/              example plan file
 docs/               backlog, playtest notes, IP audit, art direction and reference images

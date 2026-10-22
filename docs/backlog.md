@@ -148,9 +148,40 @@ Which events fire, where runs end, average Suspicion curve — for tuning only.
 
 ---
 
+## M4 — Design framework
+
+Filed after the art-direction pass, to turn it into a system.
+
+**MM-43 · Design tokens as a single source of truth** · `design` `ui` `build` · P1
+One typed source for colour roles, generated CSS, canvas palette reading the same primitives; no raw colours in the stylesheet.
+
+**MM-44 · Type, spacing, radius and motion scales with a design lint** · `design` `ui` `qa` · P1
+Scales for type, space and motion in CSS and JS; a lint test enforcing them, focus styles and breakpoints; checked at phone width.
+
+**MM-45 · Themes: night, paper and high contrast, with contrast tests** · `design` `ui` · P1
+Three themes from the same roles; WCAG AA asserted for every text role on every surface.
+
+**MM-46 · A component kit the tests can reach** · `design` `ui` `qa` · P1
+Dependency-free `h()` view layer, reusable components, pure views; accessible-name and state tests in Node.
+
+**MM-47 · An icon set in the house line style** · `design` `art` `ui` · P2
+Line icons for needs, actions and chips, always beside a label.
+
+**MM-48 · A living style guide page** · `design` `ui` `content` · P1
+`styleguide.html`: tokens per theme, scales, components, icons, figures, furniture, stage variants.
+
+**MM-49 · Visual regression tests and a capture script** · `design` `qa` `build` · P1
+Fingerprint snapshots of every drawing; `pnpm shots` for the reference images.
+
+**MM-50 · Design system documentation** · `design` `content` · P2
+`docs/design-system.md` with how-to guides; linked from the art direction and README.
+
+---
+
 ## Dependencies (high level)
 
 - M0 is strictly sequential: 01 → 02 → 03 → 04–06 → 07 → 08 → 09 → 10 → 11 → 12.
 - MM-22 (renderer) and MM-23 (planning UI) block every other M1 UI issue.
 - MM-16 depends on MM-17; MM-19 depends on MM-20.
 - MM-37 and MM-40 gate release.
+- M4: MM-43 → MM-44 → MM-45; MM-46 before MM-47 and MM-48; MM-49 and MM-50 last.
